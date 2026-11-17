@@ -5,3 +5,5 @@ local.properties
 *.aar
 *.apk
 *.log
+*.so
+*.dll

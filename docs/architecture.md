@@ -61,3 +61,4 @@
 - 新包 kernel/mobilebind：gomobile AAR 桥接门面（开源区，薄层，函数签名稳定，内核逻辑不得写在桥层）。PRD 结构表未列，属桥接必需，随 T-M0-04 入表。
 - go.mod：tool golang.org/x/mobile/cmd/gomobile 入账（v0.0.0-20261117202452）；随带间接 x/mod/x/sync/x/tools 为工具链内部用；go 指令抬至 1.26.0（PRD 下限 1.22+ 不违反）。
 - 安卓构建链锁定：Gradle 8.9 wrapper + AGP 8.5.2 + Kotlin 2.0.21 + Compose BOM 2024.09.03（仅构建期，不进内核依赖）。
+- 新包 kernel/desktopbind（T-M0-05）：c-shared 桌面出口 + 手写 JNI 桥（jnibridge.c，REVIEW-NEEDED 待评审）+ wininc 最小交叉头；开源区，薄门面复用 mobilebind。

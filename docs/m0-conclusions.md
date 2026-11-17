@@ -28,3 +28,30 @@
 3. cp build/mobilebind.aar ui-android/app/libs/
 4. cd ui-android && ./gradlew assembleDebug --no-daemon
 产物：app/build/outputs/apk/debug/app-debug.apk（AAR/APK 为构建工件，不入 git）。
+
+## T-M0-05 c-shared DLL + JNI 链路（2026-11-18）
+
+**结论：链路通。** Linux .so + JNI 无头 JVM 实测全绿；Windows DLL mingw 交叉编译产物验证齐全，Windows 真机 DEFERRED。
+
+### 实测记录
+- 新增 kernel/desktopbind：Go 导出 SrVersion/SrEcho（复用 mobilebind 逻辑，桥层零逻辑）+ 手写 jnibridge.c（REVIEW-NEEDED，红线 7）+ wininc/jni_md.h（交叉编译用最小 Windows JNI 类型头）。
+- Linux：go build -buildmode=c-shared -o build/desktop/libstarriver.so ./kernel/desktopbind，exit=0；.so 2.0M + 头文件；nm -D 导出 SrVersion/SrEcho/Java_com_starriver_desktop_KernelBridge_{version,echo} 齐全。
+- JNI 实测（javac 17 + java -Xmx256m 无头）：version/echo-ascii/echo-empty/echo-utf8（中文emoji）/echo-control 五用例 [OK]，JNI-LINUX-GREEN。
+- Windows：CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -buildmode=c-shared -o build/desktop/starriver.dll，exit=0；file 验货 PE32+ executable for MS Windows 10.00 (DLL), x86-64, 21 sections；mingw-nm 四符号齐全。
+- 一次通过，无报错。
+
+### 验收映射（DEFERRED 延伸，依 T-M0-01 裁决）
+- PRD"Compose Multiplatform 桌面工程经 JNI 调 Echo"：JNI ABI 已经 Java 载体无头验证（与 Kotlin 同一 JNI 符号路径）；Compose 桌面工程 M5/T-M5-03 落地，G0 前以 Xvfb 无头补验最小 Compose+JNI 工程（4G 内存约束，Compose 桌面全量工程不在 M0 跑）。Windows 真机调 DLL 仍 DEFERRED。
+
+### 遗留 / 待裁决
+- jnibridge.c 为手写 cgo/JNI 指针边界：REVIEW-NEEDED，外部评审前不得视为终稿。
+- JNI NewStringUTF 用 Modified UTF-8：emoji 往返实测无损，但与非 JVM 方互操作需改 String.getBytes(UTF_8)+byte[] 方案，M5 裁决。
+- JDK 头路径硬编码构建机路径（main.go #cgo 注释已标），M5 参数化。
+- wininc/jni_md.h 为最小替代头，M5 换正式 Windows JDK 头复核。
+- DLL 在 Windows 真机的加载/调用 DEFERRED；Go runtime 在 Windows 服务/托盘场景行为 M5 验。
+
+### 复现步骤
+1. go build -buildmode=c-shared -o build/desktop/libstarriver.so ./kernel/desktopbind
+2. cd ui-desktop && javac -encoding UTF-8 -d build/classes src/main/java/com/starriver/desktop/*.java
+3. java -Xmx256m -cp build/classes com.starriver.desktop.Main /root/star-river/build/desktop/libstarriver.so → JNI-LINUX-GREEN
+4. CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -buildmode=c-shared -o build/desktop/starriver.dll ./kernel/desktopbind
