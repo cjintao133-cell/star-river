@@ -1,0 +1,7 @@
+# 构建工件与本地缓存不入仓（AAR/APK 由构建链再生，见 docs/m0-conclusions.md 复现步骤）
+build/
+.gradle/
+local.properties
+*.aar
+*.apk
+*.log
