@@ -55,3 +55,24 @@
 2. cd ui-desktop && javac -encoding UTF-8 -d build/classes src/main/java/com/starriver/desktop/*.java
 3. java -Xmx256m -cp build/classes com.starriver.desktop.Main /root/star-river/build/desktop/libstarriver.so → JNI-LINUX-GREEN
 4. CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc go build -buildmode=c-shared -o build/desktop/starriver.dll ./kernel/desktopbind
+
+## T-M0-09：garble 兼容性实测（spike，已批准提前）
+
+### 结论（garble v0.18.0 + Go 1.27.4，构建机实测）
+- **Linux 桌面 .so：兼容。** `garble build -buildmode=c-shared` exit=0，体积 2.0M→1.4M；`nm -D` 动态符号 SrVersion/SrEcho/Java_com_starriver_desktop_KernelBridge_version/echo 全在；JNI 五用例复跑全绿（JNI-LINUX-GREEN）。
+- **Windows DLL：兼容（导出表级验证）。** mingw 交叉 + garble exit=0；garble 剥符号表（21→10 sections，file 报 stripped），`nm` 无输出属预期；`objdump -p` PE 导出表四名齐全（SrVersion/SrEcho/两个 Java_com_...）。Windows 真机加载仍 DEFERRED，M5/T-M7 复核。
+- **Android gomobile：不兼容，无注入点。** `go tool gomobile help bind` 共享 build flags 仅 -a/-n/-x/-gcflags/-ldflags/-overlay/-tags/-trimpath/-work，**无 -toolexec**（garble 的注入机制）；`garble bind` → `unknown command: "bind"`。
+- **降级方案（采纳并验证）：仅桌面 garble。** Linux .so 与 Windows DLL 走 garble，Android AAR 链路不混淆。T-M7 桌面发布构建用 garble 替换 go build，Android 链路不变。
+
+### 遗留 / 风险
+- Android 端 Go 符号不混淆：闭源包（hippocampus/endocrine/proactive）进 AAR 后 libgojni.so 内包路径/函数名仍可读。缓解候选（fork gomobile 加 toolexec / 等上游支持）未批准，v1 不引入；记残余风险，T-M7-06 复查。
+- garble 剥 DLL 调试符号影响 Windows 崩溃解析（T-M7-08）：minidump 符号化方案需在 M7 用 garble 产物复核。
+- 本 spike 仅覆盖 desktopbind（Version/Echo）。闭源包接入后需重跑 garble 全量构建验证（T-M7）。
+
+### 复现步骤
+1. `garble build -buildmode=c-shared -o build/garble/libstarriver.so ./kernel/desktopbind`
+2. `nm -D --defined-only build/garble/libstarriver.so | grep -E 'Java_|SrVersion|SrEcho'` → 四导出符号在
+3. `javac -encoding UTF-8 -d build/classes ui-desktop/src/main/java/com/starriver/desktop/*.java && java -Xmx256m -cp build/classes com.starriver.desktop.Main /root/star-river/build/garble/libstarriver.so` → JNI-LINUX-GREEN
+4. `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc garble build -buildmode=c-shared -o build/garble/starriver.dll ./kernel/desktopbind`
+5. `x86_64-w64-mingw32-objdump -p build/garble/starriver.dll | grep -A 15 'Export Address Table'` → 导出表四名齐全
+6. `go tool gomobile help bind`（flags 无 -toolexec）；`garble bind ...` → unknown command: "bind"
