@@ -96,3 +96,9 @@
 ### 遗留
 - APK 体积 9.8M→12M 待 T-M7-06 复查（libgojni 未 strip + cgo 桥增量）。
 - bridge 的 LDFLAGS 依赖先跑 make -f native/Makefile all；CI 脚本顺序 T-M0-08/10 固化。
+
+## T-M0-08：C 门禁与故障注入（2026-02 实测）
+- native/test-c.sh 三跑串行全绿：普通+注入 / ASan+注入 / Valgrind 正常版（-DTEST_NO_WRAP，注入会干扰 Valgrind 的 syscall 包装，故不跑 wrap 版）。
+- Linux 故障注入用 ld --wrap=sysinfo（零新依赖）：返 -1/EFAULT、mem_unit=0、故障后恢复，三用例绿。
+- DEFERRED：Android getauxval 失败分支、Windows GlobalMemoryStatusEx 失败分支在 Linux 构建机无法注入，留待各平台真机/后续任务覆盖。
+- scripts/ci-local.sh（B 版）：make native → C 门禁 → go vet；staticcheck/race/AAR/DLL 由 T-M0-10 接入。实测 CI-LOCAL GREEN（/root/m0-08-ci.log）。
