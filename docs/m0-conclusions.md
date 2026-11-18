@@ -76,3 +76,23 @@
 4. `CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc garble build -buildmode=c-shared -o build/garble/starriver.dll ./kernel/desktopbind`
 5. `x86_64-w64-mingw32-objdump -p build/garble/starriver.dll | grep -A 15 'Export Address Table'` → 导出表四名齐全
 6. `go tool gomobile help bind`（flags 无 -toolexec）；`garble bind ...` → unknown command: "bind"
+
+## T-M0-07：cgo 集成 device_probe 双端跑通
+
+### 实测
+- kernel/native/bridge：cgo 按 GOOS/GOARCH 链 build/native/<target>/libdevice_probe.a；Linux `go test -race` 两用例 PASS（neon=false avx2=true）。
+- Linux .so 2.0M→2.4M，nm 含三个 T sr_ + SrDeviceProfile + Java_...deviceProfile；JNI 六用例全绿，DEVICE-PROFILE JSON 打印一次（avail≈617M）。
+- Windows DLL 2.7M→3.4M，mingw-nm 同五符号齐全；真机打印 DEFERRED（裁决映射：符号级验证代替，M5/T-M7 补真机）。
+- AAR：libgojni.so 2,614,552→2,622,296 字节，llvm-nm 含三个 T sr_ + cgo 包装符号；APK 12M（较 M0-04 的 9.8M 增大，T-M7-06 体积复查）。
+- 主人真机（arm64）覆盖安装实测：PROFILE {"neon":true,"avx2":false,"avail_mem_bytes":162447360}，与构建机 x86 结果相反，架构检测交叉验证成立。截图在会话。
+
+### 指针规则评审记录（红线 7，REVIEW-NEEDED）
+- 范围：kernel/native/bridge/bridge.go（cgo 调用边界）、kernel/desktopbind/main.go 新增 SrDeviceProfile、kernel/desktopbind/jnibridge_probe.c（新增 JNI 桥）。jnibridge.c 维持 T-M0-05 挂起评审，本任务未改动。
+- C 不持有 Go 指针：bridge 三函数全为传值调用（void 入参、标量返回），无指针入参、无句柄、无堆分配、无回调；C 侧无从获得 Go 指针。
+- SetFinalizer 兜底：不适用——device_probe 无句柄无资源，没有可终结对象；不造假句柄凑验收。约定：未来 C API 引入句柄/资源型返回时，Go 封装必须持句柄并 SetFinalizer 兜底 + 显式 Close，届时重走评审。
+- SrDeviceProfile 内存契约同 SrVersion：C.CString(malloc) 返回，jnibridge_probe.c 侧 NewStringUTF 后 free；NULL 防御；无入参故无 GetStringUTFChars 路径；JSON 全 ASCII 无 Modified UTF-8 风险。
+- 结论：自评审通过，待外部评审确认。评审前 jnibridge_probe.c 与 bridge.go 的 cgo 段不视为终稿。
+
+### 遗留
+- APK 体积 9.8M→12M 待 T-M7-06 复查（libgojni 未 strip + cgo 桥增量）。
+- bridge 的 LDFLAGS 依赖先跑 make -f native/Makefile all；CI 脚本顺序 T-M0-08/10 固化。

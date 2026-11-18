@@ -9,6 +9,15 @@ public final class Main {
         expect("", KernelBridge.echo(""), "echo-empty");
         expect("中文与emoji🌌混排", KernelBridge.echo("中文与emoji🌌混排"), "echo-utf8");
         expect("line1\nline2\ttab", KernelBridge.echo("line1\nline2\ttab"), "echo-control");
+        String profile = KernelBridge.deviceProfile();
+        if (profile == null || !profile.startsWith("{") || !profile.endsWith("}")
+                || !profile.contains("\"neon\":") || !profile.contains("\"avx2\":")
+                || !profile.contains("\"avail_mem_bytes\":")
+                || !profile.contains("\"version\":\"star-river-kernel/0.0.1-m0\"")) {
+            throw new AssertionError("device-profile: bad JSON [" + profile + "]");
+        }
+        System.out.println("[OK] device-profile");
+        System.out.println("DEVICE-PROFILE: " + profile);
         System.out.println("JNI-LINUX-GREEN");
     }
 

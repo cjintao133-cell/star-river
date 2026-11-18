@@ -15,10 +15,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val version = Mobilebind.version()
         val echo = Mobilebind.echo("ping-中文-🌌")
+        val profile = Mobilebind.deviceProfile()
         setContent {
             Column(Modifier.padding(24.dp)) {
                 Text("VERSION: $version")
                 Text("ECHO: $echo")
+                Text("PROFILE: $profile")
             }
         }
     }
