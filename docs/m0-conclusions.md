@@ -109,3 +109,10 @@
 - launcher.c 内存契约：DLL 返回串属 DLL 内 mingw CRT 堆，exe 跨模块 free 是 UB，启动器不 free（进程即退）；M5 裁决 SrFree 导出或统一 CRT。本文件 Windows-only，Linux ASan/Valgrind 无法覆盖（DEFERRED）。
 - 签名链：Android debug keystore 自动签名（真机安装验收）；Windows 自签名+SmartScreen 警告记录需真机，DEFERRED 至 M5/T-M7。自签名步骤备忘（Windows 侧执行）：New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Star River Dev" -CertStoreLocation Cert:\CurrentUser\My；signtool sign /fd SHA256 /a starriver-launcher.exe；自签名证书不受信，SmartScreen 必弹"未知发布者"，记录截图入任务 notes。
 - DEFERRED 清单：exe 真机运行/SmartScreen 实录、DLL 真机加载、GitHub Actions 真实触发。
+
+## G0-PREP：Compose 桌面特性初查（Xvfb 无头，T-M0-05 映射兑现）
+- 工程：ui-desktop-compose/（Kotlin 2.0.21 + Compose Multiplatform 1.7.3 + Gradle 8.9）；JNI 载体经 sourceSets srcDir 复用 ui-desktop/KernelBridge.java，零复制，符号不变。
+- 实测：首跑 39s（含依赖拉取，阿里云+JB 仓可达）、二跑 11s，gradle -Xmx1g / app -Xmx512m 无 OOM；version/echo-utf8/device-profile 三断言绿，COMPOSE-JNI-GREEN；Robot 全屏截图两次归档（build/artifacts/g0-prep-compose.png），窗口三行渲染亲核。
+- skiko 渲染：无 GPU Xvfb 上 GL context 创建失败 → "[SKIKO] warn: Fallback to next API" → 软渲染成功。M5 建议显式 -Dskiko.renderApi=SOFTWARE 免走异常路径。
+- 字体：服务器原无中文字体（截图全方框），apt 装 fonts-noto-cjk 后中文正常；emoji 仍方框（Noto CJK 无彩色 emoji 字形），JNI 字符串往返断言无损，纯显示问题。M5 桌面发布需裁决内置字体或依赖系统字体；构建机如需 emoji 显示补 fonts-noto-color-emoji。
+- 结论：Compose 桌面 + 既有 JNI 桥链路成立，G0 该项证据齐。正式桌面工程 M5/T-M5-03 落地。
