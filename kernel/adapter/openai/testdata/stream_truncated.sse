@@ -1,0 +1,3 @@
+data: {"id":"chatcmpl-tr","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":"cut "}}]}
+
+data: {"id":"chatcmpl-tr","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"off mid"}}]}

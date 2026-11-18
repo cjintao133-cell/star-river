@@ -1,0 +1,11 @@
+: keep-alive
+
+event: message
+id: 1
+data: {"id":"chatcmpl-cm","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"Hi"}}]}
+
+: ping
+
+data: {"id":"chatcmpl-cm","model":"gpt-4o-mini","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]

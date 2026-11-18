@@ -1,0 +1,3 @@
+data: {"id":"chatcmpl-em","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"partial answer"}}]}
+
+data: {"error":{"message":"upstream connect error or disconnect/reset before headers","type":"server_error","code":"bad_gateway"}}

@@ -1,0 +1,3 @@
+data: {"id":"chatcmpl-bj","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"ok"}}]}
+
+data: {"choices":[{"index":0,"delta":{"content":"broken"}

@@ -1,0 +1,1 @@
+{"error":{"message":"This model does not support stream mode. Please set stream=false.","type":"invalid_request_error","code":"stream_not_supported"}}

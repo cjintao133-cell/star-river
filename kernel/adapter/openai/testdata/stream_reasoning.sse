@@ -1,0 +1,9 @@
+data: {"id":"chatcmpl-r1","model":"deepseek-reasoner","choices":[{"index":0,"delta":{"role":"assistant","reasoning_content":"Let me "}}]}
+
+data: {"id":"chatcmpl-r1","model":"deepseek-reasoner","choices":[{"index":0,"delta":{"reasoning_content":"think."}}]}
+
+data: {"id":"chatcmpl-r1","model":"deepseek-reasoner","choices":[{"index":0,"delta":{"content":"42"}}]}
+
+data: {"id":"chatcmpl-r1","model":"deepseek-reasoner","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]

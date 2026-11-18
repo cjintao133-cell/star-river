@@ -1,0 +1,11 @@
+data: {"id":"chatcmpl-basic","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"role":"assistant","content":""}}]}
+
+data: {"id":"chatcmpl-basic","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":"Hello"}}]}
+
+data: {"id":"chatcmpl-basic","model":"gpt-4o-mini","choices":[{"index":0,"delta":{"content":" world"}}]}
+
+data: {"id":"chatcmpl-basic","model":"gpt-4o-mini","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-basic","model":"gpt-4o-mini","choices":[],"usage":{"prompt_tokens":9,"completion_tokens":2,"total_tokens":11}}
+
+data: [DONE]
