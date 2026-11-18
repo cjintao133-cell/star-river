@@ -102,3 +102,10 @@
 - Linux 故障注入用 ld --wrap=sysinfo（零新依赖）：返 -1/EFAULT、mem_unit=0、故障后恢复，三用例绿。
 - DEFERRED：Android getauxval 失败分支、Windows GlobalMemoryStatusEx 失败分支在 Linux 构建机无法注入，留待各平台真机/后续任务覆盖。
 - scripts/ci-local.sh（B 版）：make native → C 门禁 → go vet；staticcheck/race/AAR/DLL 由 T-M0-10 接入。实测 CI-LOCAL GREEN（/root/m0-08-ci.log）。
+
+## T-M0-10：签名链与 CI 矩阵（实测）
+- ci-local.sh 全矩阵九段全绿（/root/m0-10-ci.log）：native/C 门禁/vet/staticcheck/race/AAR/APK/DLL/artifacts。artifacts=build/artifacts/（AAR/APK/DLL/exe/三静态库+SHA256SUMS），"可下载"映射为 SFTP 取件（GitHub Actions DEFERRED 裁决延伸）。
+- Windows exe 映射（主人批"怎么好怎么来"）：ui-desktop/launcher.c 最小启动器，mingw 交叉 PE32+ console，导入表 KERNEL32(LoadLibraryA/GetProcAddress/FreeLibrary)+msvcrt 验货齐。运行方式：与 starriver.dll 同目录双击/命令行，预期打印 VERSION/DEVICE-PROFILE/LAUNCHER-OK。
+- launcher.c 内存契约：DLL 返回串属 DLL 内 mingw CRT 堆，exe 跨模块 free 是 UB，启动器不 free（进程即退）；M5 裁决 SrFree 导出或统一 CRT。本文件 Windows-only，Linux ASan/Valgrind 无法覆盖（DEFERRED）。
+- 签名链：Android debug keystore 自动签名（真机安装验收）；Windows 自签名+SmartScreen 警告记录需真机，DEFERRED 至 M5/T-M7。自签名步骤备忘（Windows 侧执行）：New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Star River Dev" -CertStoreLocation Cert:\CurrentUser\My；signtool sign /fd SHA256 /a starriver-launcher.exe；自签名证书不受信，SmartScreen 必弹"未知发布者"，记录截图入任务 notes。
+- DEFERRED 清单：exe 真机运行/SmartScreen 实录、DLL 真机加载、GitHub Actions 真实触发。
