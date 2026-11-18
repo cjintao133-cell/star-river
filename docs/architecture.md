@@ -8,6 +8,7 @@
 ## 包边界
 | 包 | 职责 | 许可区 |
 |---|---|---|
+| kernel/core/types | 内核数据契约（六类型 + Validate，纯标准库） | 开源 |
 | kernel/bus | 事件广播（门铃）+ 直调混合 | 开源 |
 | kernel/adapter | openai/anthropic/gemini 三协议 + 发现/分类/灾备 | 开源 |
 | kernel/orchestrator | 七层上下文 + 预算分配 + 摘要接力 | 未定（暂私有） |
