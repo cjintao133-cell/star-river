@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 无 ActionBar 主题：去掉平台默认那条黑色 ActionBar("Star River")，全交给 Compose 自绘。
+         系统栏透明 + enableEdgeToEdge() 让内容延伸到状态栏/导航栏，颜色图标由代码按明暗主题设定。 -->
+    <style name="Theme.StarRiver" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/sr_window_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

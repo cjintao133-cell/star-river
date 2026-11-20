@@ -1,7 +1,10 @@
 package com.starriver.app
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,6 +39,14 @@ import androidx.compose.ui.unit.sp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 边缘到边缘 + 去 ActionBar：系统栏透明，图标颜色随明暗主题。修复顶部黑条。
+        val darkTheme = ThemePrefs.load(this).mode == ThemeMode.NIGHT
+        enableEdgeToEdge(
+            statusBarStyle = if (darkTheme) SystemBarStyle.dark(Color.TRANSPARENT)
+            else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = if (darkTheme) SystemBarStyle.dark(Color.TRANSPARENT)
+            else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+        )
         AppCtx.ctx = applicationContext
         KernelBoot.ensure(this)
         Diag.install(this)
@@ -69,7 +81,7 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
     AppTheme(theme) {
         key(lang, theme.mode, theme.accent, theme.radiusDp) {
             val body: @Composable () -> Unit = {
-                Column(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize().systemBarsPadding()) {
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when (tab) {
                             0 -> MessageTab(config, app) { tab = 3 }
@@ -104,10 +116,10 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
 @Composable
 private fun BottomBar(cur: Int, onSel: (Int) -> Unit) {
     val items = listOf(
-        "💬 " + AppI18n.t("nav.messages"),
-        "👤 " + AppI18n.t("nav.contacts"),
-        "🌐 " + AppI18n.t("nav.community"),
-        "⚙ " + AppI18n.t("nav.settings"),
+        AppI18n.t("nav.messages"),
+        AppI18n.t("nav.contacts"),
+        AppI18n.t("nav.community"),
+        AppI18n.t("nav.settings"),
     )
     Row(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 4.dp),

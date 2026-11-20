@@ -11,6 +11,7 @@
 
     <application
         android:label="Star River"
+        android:theme="@style/Theme.StarRiver"
         android:usesCleartextTraffic="false">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
