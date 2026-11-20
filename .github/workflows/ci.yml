@@ -11,21 +11,25 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      # Desktop JNI bridge (kernel/desktopbind) needs JDK jni.h; it is built on desktop
+      # toolchains, not in this Linux CI. Exclude it from the cross-platform core gate.
+      - name: select packages (exclude desktop JNI bridge)
+        run: echo "PKGS=$(go list ./... | grep -v /desktopbind | tr '\n' ' ')" >> "$GITHUB_ENV"
       - name: gofmt
         run: test -z "$(gofmt -l .)"
       - name: go vet
-        run: go vet ./...
+        run: go vet $PKGS
       - name: go build
-        run: go build ./...
+        run: go build $PKGS
       - name: go test
-        run: go test ./kernel/...
+        run: go test $PKGS
       - name: go test -race (concurrent packages)
         run: go test -race ./kernel/bus/... ./kernel/orchestrator/... ./kernel/proactive/...
       - name: layering guard (core must not import capability plugins)
         run: bash scripts/check-open-split.sh
       - name: govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck $PKGS
       - name: staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest && staticcheck ./...
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest && staticcheck $PKGS
       - name: hello-kernel demo smoke
         run: go run ./examples/hello-kernel
