@@ -23,11 +23,11 @@ var (
 )
 
 type visualCfgInfo struct {
-	BaseURL  string `json:"base_url"`
-	APIKey   string `json:"api_key"`
-	Model    string `json:"model"`
-	Backend  string `json:"backend"`   // "openai-image"(默认) | "comfyui"
-	EditPath string `json:"edit_path"` // 可选，覆盖默认 /images/edits
+	BaseURL  string            `json:"base_url"`
+	APIKey   string            `json:"api_key"`
+	Model    string            `json:"model"`
+	Backend  string            `json:"backend"`   // "openai-image"(默认) | "comfyui"
+	EditPath string            `json:"edit_path"` // 可选，覆盖默认 /images/edits
 	Header   map[string]string `json:"header,omitempty"`
 }
 
@@ -57,6 +57,17 @@ func VisualInit(cfgJSON string) string {
 			Model:    cfg.Model,
 			EditPath: cfg.EditPath,
 			Header:   hdr,
+		}
+	case "siliconflow", "siliconflow-image", "sf":
+		hdr := http.Header{}
+		for k, v := range cfg.Header {
+			hdr.Set(k, v)
+		}
+		backend = &visual.SiliconFlowImageBackend{
+			BaseURL: cfg.BaseURL,
+			APIKey:  cfg.APIKey,
+			Model:   cfg.Model,
+			Header:  hdr,
 		}
 	case "comfyui":
 		return "ERR:comfyui 需工作流(WorkflowBuilder)，App 侧暂不支持；请用直接画图模型(openai-image)"

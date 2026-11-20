@@ -14,6 +14,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"image"
@@ -25,6 +27,7 @@ import (
 
 	"star-river/kernel/adapter/openai"
 	"star-river/kernel/core/types"
+	"star-river/kernel/mobilebind"
 	"star-river/kernel/visual"
 )
 
@@ -88,6 +91,108 @@ func selftest() bool {
 	return true
 }
 
+// runSelfie 真·自拍端到端：InitKernel→建角→设人设图→VisualInit(硅基)→VisualSelfie→验水印→落盘。
+// 走 App 完全相同的 mobilebind 全链路（含人设图垫图 + 自拍模板 + 强制水印）。
+func runSelfie(base, key, imgModel string) bool {
+	if base == "" || imgModel == "" {
+		fmt.Println("[selfie] 缺 -base/-imgmodel，跳过")
+		return false
+	}
+	dir, err := os.MkdirTemp("", "sr-selfie-")
+	if err != nil {
+		fmt.Println("[selfie] tmpdir:", err)
+		return false
+	}
+	defer os.RemoveAll(dir)
+	ck := make([]byte, 32)
+	for i := range ck {
+		ck[i] = byte(i + 1)
+	}
+	if r := mobilebind.InitKernel(dir+"/sr.db", base64.StdEncoding.EncodeToString(ck)); r != "OK" {
+		fmt.Println("[selfie] InitKernel:", redact(r, key))
+		return false
+	}
+	defer mobilebind.CloseKernel()
+	persona, err := synthPNG()
+	if err != nil {
+		fmt.Println("[selfie] 合成人设图失败:", err)
+		return false
+	}
+	if r := mobilebind.CreateCharacter(`{"id":"c1","name":"示例角色"}`); r != "OK" {
+		fmt.Println("[selfie] CreateCharacter:", redact(r, key))
+		return false
+	}
+	if r := mobilebind.SetCharacterPersona("c1", persona); r != "OK" {
+		fmt.Println("[selfie] SetCharacterPersona:", redact(r, key))
+		return false
+	}
+	cfgJSON, _ := json.Marshal(map[string]any{"base_url": base, "api_key": key, "model": imgModel, "backend": "siliconflow"})
+	if r := mobilebind.VisualInit(string(cfgJSON)); r != "OK" {
+		fmt.Println("[selfie] VisualInit:", redact(r, key))
+		return false
+	}
+	t0 := time.Now()
+	raw := mobilebind.VisualSelfie("c1", "seaside")
+	if strings.HasPrefix(raw, "ERR:") {
+		fmt.Println("[selfie] ❌ VisualSelfie:", redact(raw, key))
+		return false
+	}
+	var res struct {
+		ImageB64 string `json:"image_b64"`
+		MIME     string `json:"mime"`
+	}
+	if err := json.Unmarshal([]byte(raw), &res); err != nil {
+		fmt.Println("[selfie] 解析结果失败:", redact(err.Error(), key))
+		return false
+	}
+	img, err := base64.StdEncoding.DecodeString(res.ImageB64)
+	if err != nil {
+		fmt.Println("[selfie] b64 解码失败:", err)
+		return false
+	}
+	wm := visual.HasAIWatermark(img)
+	_ = os.MkdirAll("build", 0o755)
+	out := "build/livecheck-selfie.png"
+	_ = os.WriteFile(out, img, 0o644)
+	fmt.Printf("[selfie] 用时=%dms mime=%s bytes=%d 强制水印=%v → %s\n", time.Since(t0).Milliseconds(), res.MIME, len(img), wm, out)
+	if !wm {
+		fmt.Println("[selfie] ❌ 自拍图未带 AI 水印（红线10）")
+		return false
+	}
+	fmt.Println("[selfie] ✅ 真·自拍全链路(人设图垫图+模板+强制水印) PASS")
+	return true
+}
+
+// runModels 列出该 key 可用模型（/models，通常免费），标注疑似画图模型，便于挑 imgmodel。
+func runModels(base, key string) bool {
+	if base == "" {
+		fmt.Println("[models] 缺 -base，跳过")
+		return false
+	}
+	c := openai.New(base, key)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ms, err := c.Models(ctx)
+	if err != nil {
+		fmt.Println("[models] ❌ 失败:", redact(err.Error(), key))
+		return false
+	}
+	fmt.Printf("[models] ✅ 共 %d 个模型\n", len(ms))
+	imgHint := []string{"flux", "kolors", "sd", "stable-diffusion", "z-image", "image", "dall", "cogview", "kling", "seedream", "doubao-seedream"}
+	for _, m := range ms {
+		low := strings.ToLower(m.ID)
+		tag := ""
+		for _, h := range imgHint {
+			if strings.Contains(low, h) {
+				tag = "  <== 疑似画图"
+				break
+			}
+		}
+		fmt.Printf("  - %s%s\n", m.ID, tag)
+	}
+	return true
+}
+
 // runChat 真实端点 1 次最小对话。
 func runChat(base, key, model string) bool {
 	if base == "" || model == "" {
@@ -118,13 +223,79 @@ func runChat(base, key, model string) bool {
 	return true
 }
 
+// makeImageBackend 按 -backend 选择图像后端。
+func makeImageBackend(base, key, model, backendName string) visual.ImageBackend {
+	switch strings.ToLower(strings.TrimSpace(backendName)) {
+	case "siliconflow", "siliconflow-image", "sf":
+		return &visual.SiliconFlowImageBackend{BaseURL: base, APIKey: key, Model: model}
+	default:
+		return &visual.OpenAIImageBackend{BaseURL: base, APIKey: key, Model: model}
+	}
+}
+
+// runEdit 真实端点 img2img（垫图，走 /images/edits，与自拍同路径）：合成人设图→生成→强制水印→断言→落盘。
+func runEdit(base, key, imgModel, prompt, backendName string, w, h int) bool {
+	if base == "" || imgModel == "" {
+		fmt.Println("[edit] 缺 -base/-imgmodel，跳过")
+		return false
+	}
+	raw, err := synthPNG()
+	if err != nil {
+		fmt.Println("[edit] 合成垫图失败:", err)
+		return false
+	}
+	backend := makeImageBackend(base, key, imgModel, backendName)
+	svc, err := visual.NewService(backend, visual.NewWatermarker(), 1)
+	if err != nil {
+		fmt.Println("[edit] NewService 失败:", redact(err.Error(), key))
+		return false
+	}
+	defer svc.Close()
+	if prompt == "" {
+		prompt = "把这张图变成示例蓝调、柔光的插画风格"
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
+	defer cancel()
+	t0 := time.Now()
+	jobID, err := svc.SubmitRequest(ctx, visual.GenerateRequest{Prompt: prompt, ImageRef: raw, Width: w, Height: h}, "livecheck-edit")
+	if err != nil {
+		fmt.Println("[edit] 提交失败:", redact(err.Error(), key))
+		return false
+	}
+	job, err := svc.Wait(ctx, jobID)
+	if err != nil {
+		fmt.Println("[edit] 等待失败:", redact(err.Error(), key))
+		return false
+	}
+	if job.Status != visual.JobSucceeded || len(job.ItemIDs) == 0 {
+		fmt.Println("[edit] ❌ 任务未成功:", job.Status, redact(job.Error, key))
+		return false
+	}
+	it, ok := svc.Gallery().Get(job.ItemIDs[0])
+	if !ok || len(it.Data) == 0 {
+		fmt.Println("[edit] ❌ 画廊无图")
+		return false
+	}
+	wm := visual.HasAIWatermark(it.Data)
+	_ = os.MkdirAll("build", 0o755)
+	out := "build/livecheck-edit.png"
+	_ = os.WriteFile(out, it.Data, 0o644)
+	fmt.Printf("[edit] 用时=%dms mime=%s bytes=%d 强制水印=%v → %s\n", time.Since(t0).Milliseconds(), it.MIME, len(it.Data), wm, out)
+	if !wm {
+		fmt.Println("[edit] ❌ 生成图未带 AI 水印（红线10）")
+		return false
+	}
+	fmt.Println("[edit] ✅ 真机 img2img(垫图/自拍同路径)+强制水印 PASS")
+	return true
+}
+
 // runImage 真实端点 1 次生图→强制水印→断言→落盘。
-func runImage(base, key, imgModel, prompt string, w, h int) bool {
+func runImage(base, key, imgModel, prompt, backendName string, w, h int) bool {
 	if base == "" || imgModel == "" {
 		fmt.Println("[image] 缺 -base/-imgmodel，跳过")
 		return false
 	}
-	backend := &visual.OpenAIImageBackend{BaseURL: base, APIKey: key, Model: imgModel}
+	backend := makeImageBackend(base, key, imgModel, backendName)
 	svc, err := visual.NewService(backend, visual.NewWatermarker(), 1)
 	if err != nil {
 		fmt.Println("[image] NewService 失败:", redact(err.Error(), key))
@@ -180,6 +351,7 @@ func main() {
 	w := flag.Int("w", 768, "生图宽")
 	h := flag.Int("h", 1024, "生图高")
 	prompt := flag.String("prompt", "", "生图提示词（空则用默认示例场景）")
+	backendName := flag.String("backend", "openai-image", "图像后端: openai-image | siliconflow")
 	flag.Parse()
 
 	key := readKey(*keyfile)
@@ -194,6 +366,8 @@ func main() {
 		needReq = 1
 	case "image":
 		needReq = 1
+	case "selfie":
+		needReq = 1
 	case "all":
 		needReq = 2
 	}
@@ -205,7 +379,7 @@ func main() {
 	fmt.Printf("[livecheck] mode=%s run=%v base=%q model=%q imgmodel=%q needReq=%d\n", *mode, *run, *base, *model, *imgModel, needReq)
 
 	if !*run {
-		fmt.Println("(dry 不联网) 计划：selftest=本地水印自检；chat=1 次对话；image=1 次生图+水印核。")
+		fmt.Println("(dry 不联网) 计划：selftest=本地水印自检；models=列模型(免费)；chat=1 次对话；image=1 次生图+水印核。")
 		if *mode == "selftest" || *mode == "all" {
 			selftest()
 		}
@@ -219,11 +393,18 @@ func main() {
 	case "chat":
 		ok = runChat(*base, key, *model)
 	case "image":
-		ok = runImage(*base, key, *imgModel, *prompt, *w, *h)
+		ok = runImage(*base, key, *imgModel, *prompt, *backendName, *w, *h)
+	case "edit":
+		ok = runEdit(*base, key, *imgModel, *prompt, *backendName, *w, *h)
+	case "selfie":
+		ok = runSelfie(*base, key, *imgModel)
+	case "models":
+		ok = runModels(*base, key)
 	case "all":
 		ok = selftest() && ok
 		ok = runChat(*base, key, *model) && ok
-		ok = runImage(*base, key, *imgModel, *prompt, *w, *h) && ok
+		ok = runImage(*base, key, *imgModel, *prompt, *backendName, *w, *h) && ok
+		ok = runEdit(*base, key, *imgModel, *prompt, *backendName, *w, *h) && ok
 	default:
 		fmt.Println("未知 mode:", *mode)
 		os.Exit(2)
