@@ -27,5 +27,12 @@
   "error.protocol": "返回内容格式异常，请重试。",
   "visual.generate": "生成图片",
   "visual.generating": "生成中…",
-  "proactive.title": "来自 TA 的消息"
+  "proactive.title": "来自 TA 的消息",
+  "nav.messages": "消息",
+  "nav.contacts": "联系人",
+  "nav.community": "社区",
+  "nav.settings": "设置",
+  "settings.tier.novice": "新手",
+  "settings.tier.advanced": "进阶",
+  "settings.tier.developer": "开发者"
 }

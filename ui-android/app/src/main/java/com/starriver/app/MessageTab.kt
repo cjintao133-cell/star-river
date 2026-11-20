@@ -67,7 +67,7 @@ private fun SessionList(config: ChatConfig, app: AppState, onSearch: () -> Unit)
             TextButton(onClick = onSearch) { Text("🔍 搜索") }
             Button(onClick = {
                 Bg.run({ (app.newSession("", "新对话", config.model, config.system)?.let { "OK" }) ?: "ERR:create" }) { tick++ }
-            }) { Text("＋ 新对话") }
+            }) { Text("＋ " + AppI18n.t("chat.new_session")) }
         }
         if (app.sessions.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -177,9 +177,9 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String) {
             Text("🎤", fontSize = 20.sp, modifier = Modifier.semantics { contentDescription = "语音输入（待接线）" }.clickable { })
             OutlinedTextField(
                 value = input, onValueChange = { input = it },
-                modifier = Modifier.weight(1f), label = { Text("说点什么…") }, maxLines = 4,
+                modifier = Modifier.weight(1f), label = { Text(AppI18n.t("chat.input_placeholder")) }, maxLines = 4,
             )
-            Button(onClick = { send() }, enabled = input.isNotBlank() && !busy) { Text(if (busy) "…" else "发送") }
+            Button(onClick = { send() }, enabled = input.isNotBlank() && !busy) { Text(if (busy) "…" else AppI18n.t("chat.send")) }
         }
     }
 }

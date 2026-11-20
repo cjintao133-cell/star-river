@@ -27,5 +27,12 @@
   "error.protocol": "Malformed response. Please retry.",
   "visual.generate": "Generate image",
   "visual.generating": "Generating…",
-  "proactive.title": "A message from them"
+  "proactive.title": "A message from them",
+  "nav.messages": "Messages",
+  "nav.contacts": "Contacts",
+  "nav.community": "Community",
+  "nav.settings": "Settings",
+  "settings.tier.novice": "Novice",
+  "settings.tier.advanced": "Advanced",
+  "settings.tier.developer": "Developer"
 }

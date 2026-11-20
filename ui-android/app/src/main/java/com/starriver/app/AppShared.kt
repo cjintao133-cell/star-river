@@ -173,3 +173,11 @@ object UiPrefs {
     fun reduceMotion(ctx: Context): Boolean = p(ctx).getBoolean("ui.reduce_motion", false)
     fun setReduceMotion(ctx: Context, v: Boolean) = p(ctx).edit().putBoolean("ui.reduce_motion", v).apply()
 }
+
+/** 语言偏好（阶段 C，语言切换 UI）。 */
+object LangPrefs {
+    private const val PREF = "star_river_prefs"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun lang(ctx: Context): String = p(ctx).getString("ui.lang", "zh") ?: "zh"
+    fun setLang(ctx: Context, v: String) = p(ctx).edit().putString("ui.lang", v).apply()
+}

@@ -35,8 +35,10 @@ fun SettingsTab(
     config: ChatConfig,
     themeMode: ThemeMode,
     reduceMotion: Boolean,
+    lang: String,
     onThemeChange: (ThemeMode) -> Unit,
     onReduceMotionChange: (Boolean) -> Unit,
+    onLangChange: (String) -> Unit,
     onSave: (ChatConfig) -> Unit,
 ) {
     var tier by remember { mutableStateOf(0) }
@@ -44,11 +46,16 @@ fun SettingsTab(
     if (screen == 1) { PermissionScreen { screen = 0 }; return }
     if (screen == 2) { ReportScreen { screen = 0 }; return }
     Column(Modifier.fillMaxSize().padding(12.dp)) {
-        Text("设置", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(AppI18n.t("settings.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(AppI18n.t("settings.language"), fontWeight = FontWeight.Bold)
+            OutlinedButton(onClick = { onLangChange("zh") }, enabled = lang != "zh") { Text("中文") }
+            OutlinedButton(onClick = { onLangChange("en") }, enabled = lang != "en") { Text("English") }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-            TierBtn("新手", 0, tier) { tier = it }
-            TierBtn("进阶", 1, tier) { tier = it }
-            TierBtn("开发者", 2, tier) { tier = it }
+            TierBtn(AppI18n.t("settings.tier.novice"), 0, tier) { tier = it }
+            TierBtn(AppI18n.t("settings.tier.advanced"), 1, tier) { tier = it }
+            TierBtn(AppI18n.t("settings.tier.developer"), 2, tier) { tier = it }
         }
         when (tier) {
             0 -> NoviceSettings(config, onSave)
