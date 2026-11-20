@@ -30,10 +30,11 @@ type Usage struct {
 // System 为独立系统提示字段（Anthropic 无 system role）；messages 里的 system 消息
 // 也会被抽取合并进 System。MaxTokens Anthropic 强制必填。
 type ChatRequest struct {
-	Model     string
-	System    string
-	Messages  []types.Message
-	MaxTokens int
+	Model        string
+	System       string
+	Messages     []types.Message
+	MaxTokens    int
+	NativeSearch bool // 启用模型原生网页搜索（Anthropic: tools web_search_20250305）
 }
 
 // ChatResult 一次成功调用的元数据。Model 为实际应答模型（中转掉包信号，T-M1-06 标记）。
@@ -246,7 +247,11 @@ func buildBody(req ChatRequest, stream bool) ([]byte, error) {
 		System    string           `json:"system,omitempty"`
 		Messages  []wireOutMessage `json:"messages"`
 		Stream    bool             `json:"stream"`
-	}{req.Model, req.MaxTokens, joinSystem(req.System, sysFromMsgs), msgs, stream}
+		Tools     []map[string]any `json:"tools,omitempty"`
+	}{Model: req.Model, MaxTokens: req.MaxTokens, System: joinSystem(req.System, sysFromMsgs), Messages: msgs, Stream: stream}
+	if req.NativeSearch {
+		body.Tools = append(body.Tools, map[string]any{"type": "web_search_20250305", "name": "web_search", "max_uses": 5})
+	}
 	return json.Marshal(body)
 }
 

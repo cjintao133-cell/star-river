@@ -27,10 +27,11 @@ type Usage struct {
 // ChatRequest v1 最小请求。P1：model/maxOutputTokens 显式；流式与否由端点方法
 // （streamGenerateContent + alt=sse）决定，非请求体字段。System 为独立系统指令字段。
 type ChatRequest struct {
-	Model     string
-	System    string
-	Messages  []types.Message
-	MaxTokens int // → generationConfig.maxOutputTokens，Gemini 必填
+	Model        string
+	System       string
+	Messages     []types.Message
+	MaxTokens    int  // → generationConfig.maxOutputTokens，Gemini 必填
+	NativeSearch bool // 启用模型原生网页搜索（Gemini: tools googleSearch）
 }
 
 // ChatResult 一次成功调用的元数据。Model 为请求模型（Gemini 响应不回显 model，
@@ -258,8 +259,12 @@ func buildBody(req ChatRequest) ([]byte, error) {
 		GenerationConfig  struct {
 			MaxOutputTokens int `json:"maxOutputTokens"`
 		} `json:"generationConfig"`
+		Tools []map[string]any `json:"tools,omitempty"`
 	}{Contents: contents}
 	body.GenerationConfig.MaxOutputTokens = req.MaxTokens
+	if req.NativeSearch {
+		body.Tools = append(body.Tools, map[string]any{"googleSearch": map[string]any{}})
+	}
 	if sys := joinSystem(req.System, sysFromMsgs); sys != "" {
 		body.SystemInstruction = &wireContentIn{Parts: []wireOutPart{{Text: sys}}}
 	}

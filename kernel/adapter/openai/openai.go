@@ -27,9 +27,10 @@ type Usage struct {
 // ChatRequest v1 最小请求。P1：stream/model/max_tokens 一律显式，不吃端点默认值。
 // 请求侧 tools 定义推迟到 T-M6-01 接线；响应侧 tool_calls 解析本任务已实现。
 type ChatRequest struct {
-	Model     string
-	Messages  []types.Message
-	MaxTokens int
+	Model        string
+	Messages     []types.Message
+	MaxTokens    int
+	NativeSearch bool // 启用模型原生网页搜索（OpenAI: web_search_options + search-preview 模型）
 }
 
 // ChatResult 一次成功调用的元数据。Model 为实际应答模型（中转掉包信号，
@@ -196,11 +197,15 @@ func buildBody(req ChatRequest, stream bool) ([]byte, error) {
 		return nil, err
 	}
 	body := struct {
-		Model     string           `json:"model"`
-		Messages  []wireOutMessage `json:"messages"`
-		MaxTokens int              `json:"max_tokens"`
-		Stream    bool             `json:"stream"`
-	}{req.Model, msgs, req.MaxTokens, stream}
+		Model            string           `json:"model"`
+		Messages         []wireOutMessage `json:"messages"`
+		MaxTokens        int              `json:"max_tokens"`
+		Stream           bool             `json:"stream"`
+		WebSearchOptions *struct{}        `json:"web_search_options,omitempty"`
+	}{Model: req.Model, Messages: msgs, MaxTokens: req.MaxTokens, Stream: stream}
+	if req.NativeSearch {
+		body.WebSearchOptions = &struct{}{}
+	}
 	return json.Marshal(body)
 }
 
