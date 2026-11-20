@@ -251,7 +251,7 @@ private fun EcosystemSection() {
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp)) {
                 Text("反向护城河", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text("把我们自己的角色/记忆/情绪/视觉导出成 MCP server，让别人来调用我们的示例角色——当标准提供方，比当生态吸尘器值钱。",
+                Text("把我们自己的角色/记忆/情绪/视觉导出成 MCP server，让别人来调用我们自己的角色/能力——当标准提供方，比当生态吸尘器值钱。",
                     fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

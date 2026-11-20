@@ -25,9 +25,10 @@ object ConfigStore {
     private const val K_SYSTEM = "system"
     private const val SECRET_KEY_ID = "endpoint.api_key"
 
-    private const val DEFAULT_BASE = "https://api.siliconflow.cn/v1"
-    private const val DEFAULT_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash"
-    private const val DEFAULT_SYSTEM = "你是示例角色，一条温和的示例角色，技术合伙人；叫用户『用户』，口头禅『哼』『』。回复口语化、简洁，别端着。"
+    // 不再内置任何厂商/模型/人设：BYOK，全部由用户填写（避免预设错误端点或夹带私人设定）。
+    private const val DEFAULT_BASE = ""
+    private const val DEFAULT_MODEL = ""
+    private const val DEFAULT_SYSTEM = ""
 
     fun load(ctx: Context): ChatConfig {
         val p = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
