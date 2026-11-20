@@ -1,9 +1,9 @@
 #!/bin/sh
-# T-M7-05 开源/闭源物理拆分验证（红线 2 守卫）。
+# 分层依赖守卫：底座包不得（传递）依赖伴侣插件包（保持底座可单独编译、可插拔）。
 #
 # 断言：
-#   1) 闭源包（hippocampus/endocrine/proactive）不被任何开源包 import（含传递依赖）。
-#   2) 开源区单独可编译（go build 通过）。
+#   1) 伴侣插件包（hippocampus/endocrine/proactive）不被任何底座包 import（含传递依赖）。
+#   2) 底座包单独可编译（go build 通过）。
 #
 # 用法：sh scripts/check-open-split.sh
 set -e
@@ -12,7 +12,7 @@ CLOSED="star-river/kernel/hippocampus
 star-river/kernel/endocrine
 star-river/kernel/proactive"
 
-# 开源区包（可按发布时口径增删）。
+# 底座包清单（可按发布时口径增删）。
 OPEN="star-river/kernel/core/types
 star-river/kernel/core/clock
 star-river/kernel/bus
@@ -25,17 +25,17 @@ star-river/kernel/cards
 star-river/kernel/tool
 star-river/kernel/orchestrator"
 
-echo "== 1) 开源区单独编译 =="
+echo "== 1) 底座包单独编译 =="
 # shellcheck disable=SC2086
 go build $OPEN
-echo "   OK: 开源包全部可编译"
+echo "   OK: 底座包全部可编译"
 
-echo "== 2) 开源包不得（传递）依赖闭源包 =="
+echo "== 2) 底座包不得（传递）依赖伴侣插件包 =="
 fail=0
 for pkg in $OPEN; do
 	for c in $CLOSED; do
 		if go list -deps "$pkg" 2>/dev/null | grep -qx "$c"; then
-			echo "   FAIL: $pkg 依赖闭源包 $c"
+			echo "   FAIL: $pkg 依赖伴侣插件包 $c"
 			fail=1
 		fi
 	done
@@ -44,6 +44,6 @@ if [ "$fail" -ne 0 ]; then
 	echo "PASS=FAILED"
 	exit 1
 fi
-echo "   OK: 开源区不依赖任何闭源包"
+echo "   OK: 底座不依赖任何伴侣插件包"
 
-echo "PASS: 开源区物理拆分成立（单独可编译 + 零闭源依赖）"
+echo "PASS: 分层约束成立（底座单独可编译 + 零插件依赖）"

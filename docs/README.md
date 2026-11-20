@@ -17,7 +17,7 @@
 - **[platform-capability.md](./platform-capability.md)** — 各平台能力对照。
 - **[search-design.md](./search-design.md)** — 搜索设计。
 - **[secret-storage.md](./secret-storage.md)** — 密钥存储设计。
-- **[licensing.md](./licensing.md)** — 许可与开源/闭源边界（**注意：与"全开源"方向存在待统一之处，见 FAQ Q11**）。
+- **[licensing.md](./licensing.md)** — 许可（**整仓 Apache-2.0**）与分层依赖约束。
 
 ## 生态与接入
 - **[community-ecosystem-contract.md](./community-ecosystem-contract.md)** — 用 Git 仓库当后端的社区接口契约。

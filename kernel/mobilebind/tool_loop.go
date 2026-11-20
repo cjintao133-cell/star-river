@@ -7,7 +7,7 @@ package mobilebind
 //   - 工具总数 >  inlineToolCap：只下发 tool_search 元工具 + 按用户消息关键词预筛的少量工具；
 //     模型可用 tool_search 搜索其余工具，命中后下一轮再懒取 schema 注入。footprint 有界。
 //
-// 红线：只用开源底座 kernel/{adapter/openai,tool,tooldisc,core/types,orchestrator}，不 import 闭源插件。
+// 红线：只用开源底座 kernel/{adapter/openai,tool,tooldisc,core/types,orchestrator}，不 import 伴侣插件。
 
 import (
 	"context"

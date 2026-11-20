@@ -1,4 +1,4 @@
-# hippocampus（闭源包）
+# hippocampus（伴侣插件包）
 
-本包为闭源区，All Rights Reserved，不适用仓库根 Apache-2.0 许可。
-禁止未经授权的复制、分发与逆向。边界依据见 docs/licensing.md。
+本包为**伴侣插件包**，以 [Apache-2.0](../../LICENSE) 开源（与全仓一致）。
+底座包不得 import 本包（分层约束）；本包可 import 底座。详见 `docs/licensing.md`。

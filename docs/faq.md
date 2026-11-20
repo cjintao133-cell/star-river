@@ -35,8 +35,7 @@
 当前 **main 主线是内核本体，不含插件系统**。（插件契约/示例插件在独立的 `plugin-wip` 分支实验，未并入主线。）主线里可以自己通过 `bus` + `tool` + `Adapter` 接口扩展。
 
 ## Q11：许可证是什么？
-- 根 `LICENSE` 为 **Apache-2.0**。
-- ⚠️ **注意**：`docs/licensing.md` 目前仍把 `hippocampus/endocrine/proactive` 标为"闭源/All Rights Reserved"，这与"全开源"的既定方向**存在冲突，需最终拍板后统一**。在定稿前，请以该文件当前文本为准并留意此不一致。
+**整仓 Apache-2.0**，包含全部内核包与记忆/情绪/主动等伴侣插件包（全部开源）。底座包不 import 伴侣插件包仅为「分层整洁/可插拔」的工程约束，与许可证无关。
 
 ## Q12：怎么反馈问题 / 参与？
 发布后以 GitHub Issues / Discussions 为唯一反馈入口（发布流程文档另附）。内核问题请附：`go build ./...`、`go vet ./...` 的结果，以及复现步骤。

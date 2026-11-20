@@ -11,20 +11,20 @@
 | kernel/core/types | 内核数据契约（六类型 + Validate，纯标准库） | 开源 |
 | kernel/bus | 事件广播（门铃）+ 直调混合 | 开源 |
 | kernel/adapter | openai/anthropic/gemini 三协议 + 发现/分类/灾备 | 开源 |
-| kernel/orchestrator | 七层上下文 + 预算分配 + 摘要接力 | 未定（暂私有） |
-| kernel/store | SQLite WAL 单写 + AES-GCM 字段加密 | 未定（暂私有） |
-| kernel/hippocampus | 遗忘曲线记忆引擎 | **闭源** |
-| kernel/endocrine | 五维情绪状态机 | **闭源** |
-| kernel/proactive | 主动调度 | **闭源** |
+| kernel/orchestrator | 七层上下文 + 预算分配 + 摘要接力 | 开源 |
+| kernel/store | SQLite WAL 单写 + AES-GCM 字段加密 | 开源 |
+| kernel/hippocampus | 遗忘曲线记忆引擎（伴侣插件包） | 开源 |
+| kernel/endocrine | 五维情绪状态机（伴侣插件包） | 开源 |
+| kernel/proactive | 主动调度（伴侣插件包） | 开源 |
 | kernel/cards | V2/V3/chara PNG 角色卡解析 | 开源 |
-| kernel/tool | 远程 MCP + Windows stdio + 内置工具 | SDK 部分开源 |
-| kernel/visual | 视觉配方/生成适配/AI 水印（不可关） | 未定（暂私有） |
-| kernel/codebrain | v1 仅 JSON 配置，v2 真实代码 | 未定 |
-| native/ | C：device_probe、向量检索、音频前处理 | probe 开源，向量默认闭源 |
-| ui-android / ui-desktop | Kotlin Compose / Compose Multiplatform | 可开源（发布时定） |
-| svc-dist | manifest/CDN/ed25519 签名/更新链 | 未定（暂私有） |
+| kernel/tool | 远程 MCP + Windows stdio + 内置工具 | 开源 |
+| kernel/visual | 视觉配方/生成适配/AI 水印（不可关） | 开源 |
+| kernel/codebrain | v1 仅 JSON 配置，v2 真实代码 | 开源（占位） |
+| native/ | C：device_probe、向量检索、音频前处理 | 开源 |
+| ui-android / ui-desktop | Kotlin Compose / Compose Multiplatform | 开源（参考实现，WIP） |
+| svc-dist | manifest/CDN/ed25519 签名/更新链 | 开源 |
 
-硬规则：开源区不得 import 闭源包（红线 2）；反向允许。记忆/情绪/主动逻辑只许住在三闭源包内。
+分层约束：底座包不得 import 伴侣插件包（hippocampus/endocrine/proactive）；反向允许。全部包均以 Apache-2.0 开源。
 
 ## 通信约定
 - 命令/查询：直接接口调用（同步，可追堆栈可管超时）。

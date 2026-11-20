@@ -1,25 +1,23 @@
-# 许可与开源/闭源边界
+# 许可
 
 ## 总则
-- 仓库根 LICENSE 为 Apache License 2.0，**仅适用于开源区**。
-- 闭源区不适用 Apache-2.0，保留所有权利（All Rights Reserved），以各包 README 声明为准。
-- 边界依据：《蓝图评审与优化版》冲突修正清单 #4（docs/constraints-12.md）。
+- **本仓库整体采用 [Apache License 2.0](../LICENSE)。** 包括全部 `kernel/*` 包、
+  `native/`、`cmd/`、`scripts/`、`.github/`、以及记忆/情绪/主动等「伴侣插件包」
+  （`kernel/hippocampus`、`kernel/endocrine`、`kernel/proactive`）。
+- 无「闭源区」。历史上曾设想的"三包闭源"方案**已废弃**，改为全开源。
+- Apache-2.0 含专利授权、商标条款与保留声明，生态友好、企业可采用。
 
-## 开源区（Apache-2.0）
-- kernel/bus（总线骨架）
-- kernel/adapter（三协议适配器）
-- kernel/cards（角色卡导入解析器）
-- kernel/tool 中的 MCP SDK 部分（T-M6-01 实现时细分）
-- native/ 中通用 C 模块（device_probe 等；向量检索模块归属 T-M3-01 时再定，默认随 hippocampus 闭源）
-- scripts/、.github/（构建脚本与 CI）
-- ui-android / ui-desktop：蓝图判定"UI 可开源"，v1 期间随仓库私有，公开发布时再定许可，不视为承诺。
+## 为什么全开源
+- 记忆曲线、情绪维度、向量召回等均为公开常识，闭源无实际壁垒，反而阻碍采用与贡献。
+- 框架的价值在"被采用、被信任、可持续维护"，不在"藏一段代码"。
 
-## 闭源区（All Rights Reserved）
-- kernel/hippocampus（记忆引擎）
-- kernel/endocrine（情绪引擎）
-- kernel/proactive（主动调度）
+## 分层约束（工程规矩，非许可证）
+虽然全部开源，仍**保留依赖方向约束**（源码整洁 + 可拔插）：
+- **底座包（`kernel/bus`、`kernel/adapter`、`kernel/store`、`kernel/orchestrator`、
+  `kernel/tool`、`kernel/core/*` 等）不得 import 伴侣插件包**
+  （`hippocampus` / `endocrine` / `proactive`）。
+- 伴侣插件包可以 import 底座。
+- 该约束由 `scripts/check-open-split.sh` 持续校验（底座可单独编译、且不依赖插件包）。
 
-## 其他
-- kernel/orchestrator、kernel/store、kernel/visual、svc-dist：边界未在蓝图明列，暂随仓库私有、未定许可，拆分（T-M7-05）前由主人裁决。
-- kernel/codebrain：v1 仅 JSON 配置生成（清单 #9），真实代码生成属 v2，不进 v1 验收。
-- 硬规则：开源区代码不得 import 闭源包（红线 2）；闭源包可以 import 开源区。
+## 贡献即同意
+按 Apache-2.0，贡献默认以同一许可授权（inbound = outbound）。

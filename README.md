@@ -21,7 +21,7 @@ Star River 是一个伴侣型 AI 的**内核底座**：通用底层 + 可插拔�
         │  core/types  core/clock  bus   adapter(openai/anthropic/gemini)   │
         │  orchestrator(七层上下文)  store(SQLite WAL+AES-GCM)              │
         │  tool(远程/stdio MCP + 内置工具)  cards(角色卡)  svc-dist(分发)     │
-        │  ────────────── 伴侣插件包（闭源区）──────────────                │
+        │  ────────────── 伴侣插件包（可插拔）──────────────                │
         │  hippocampus(遗忘曲线)  endocrine(五维情绪)  proactive(主动调度)  │
         └───────────────▲───────────────────────────────────────────────────┘
                         │ cgo
@@ -31,7 +31,7 @@ Star River 是一个伴侣型 AI 的**内核底座**：通用底层 + 可插拔�
 ```
 
 - **通信**：命令/查询走直接接口调用；状态变更走 `bus` 门铃广播（订阅者收铃拉最新快照，容忍丢铃，有界缓冲背压）。
-- **红线 2（依赖方向）**：开源区**不得** import 闭源插件包；闭源包可 import 开源底座。工程内有 `scripts/check-open-split.sh` 守卫。
+- **分层约束（依赖方向）**：底座包**不得** import 伴侣插件包；插件包可 import 底座。工程内有 `scripts/check-open-split.sh` 守卫（底座可单独编译）。
 
 ## 目录结构
 
@@ -40,7 +40,7 @@ star-river/
   kernel/       Go 内核
     core/{types,clock}  bus  adapter/  orchestrator/  store/
     cards/  tool/  svc-dist/
-    hippocampus/ endocrine/ proactive/   闭源插件包
+    hippocampus/ endocrine/ proactive/   伴侣插件包
     native/{bridge,vector}  mobilebind/ desktopbind/
   native/       C 模块（device_probe、向量检索）
   cmd/srchat/       最小 CLI 聊天闭环
@@ -59,7 +59,7 @@ go vet ./...
 staticcheck ./...
 go test -race ./...
 
-# 开源/闭源拆分守卫（红线 2）
+# 分层依赖守卫（底座不依赖伴侣插件包）
 sh scripts/check-open-split.sh
 
 # 最小 CLI 对话（key 只经 -keyfile 或 SR_API_KEY，不进命令行/日志）
@@ -86,13 +86,12 @@ go run ./cmd/srchat -base https://host/v1 -model <model> -keyfile /path/to/key
 ## 贡献
 
 - 每提交门禁：`gofmt` 干净 + `go vet` + `staticcheck` + 相关单测（并发包 `-race`）；核心包覆盖率 ≥70%；C 代码 ASan+Valgrind 串行零报告。
-- 红线（`docs/architecture.md` 12 条）不可违反，尤其依赖方向（开源不 import 闭源）与密钥不进日志/URL。
+- 红线（`docs/architecture.md`）不可违反，尤其依赖方向（底座不 import 伴侣插件包）与密钥不进日志/URL。
 - 涉及安全敏感实现（加密、cgo 句柄、签名链）标 `REVIEW-NEEDED`，发布前外部评审。
 
 ## 许可
 
-- 开源区：Apache-2.0（见 `LICENSE` / `docs/licensing.md`）。
-- 闭源插件包（`hippocampus` / `endocrine` / `proactive` 等）：All Rights Reserved，禁止未授权复制、分发与逆向。
+- **整仓 Apache-2.0**（见 `LICENSE` / `docs/licensing.md`），包含全部内核包与记忆/情绪/主动等伴侣插件包。
 
 ## 状态
 

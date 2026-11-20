@@ -15,7 +15,7 @@ kernel/     Go 内核（26 个包）：adapter(openai/anthropic/gemini/router) o
             backup diag compliance i18n netx native(vector) mobilebind desktopbind …
 native/     C/H（device_probe、vector 等），含 Makefile 三平台静态库
 cmd/        srchat / livecheck / stresssim（CLI 与调试工具）
-scripts/    check-open-split.sh（开源区零闭源依赖校验）等
+scripts/    check-open-split.sh（底座零依赖伴侣插件包的分层校验）等
 docs/       架构、契约、评审记录
 ```
 规模：Go 生产 ≈ 19k 行 / 137 文件；C/H ≈ 0.6k 行。

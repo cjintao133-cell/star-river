@@ -2,7 +2,7 @@ package mobilebind
 
 // 内核实例门面 + 角色/会话桥（T-新增）。薄门面：打开本地 SQLite，暴露角色与会话 CRUD。
 // gomobile 类型约束：函数只用 string/int/bool/[]byte；结构走 JSON string；图片走 []byte。
-// 红线：只 import 开源底座（store），不 import 闭源插件。
+// 红线：只 import 开源底座（store），不 import 伴侣插件。
 
 import (
 	"context"
@@ -60,8 +60,12 @@ func InitKernel(dbPath, cipherKeyBase64 string) string {
 	kbStore, kbRepo, kbChars = st, repo, chars
 	setDumpsDir(dbPath)
 	// 重开库后重置派生单例（tooldisc 索引 / MCP 管理器），避免指向已关闭的旧库。
-	tdMu.Lock(); tdIdx = nil; tdMu.Unlock()
-	mcpMu.Lock(); mcpMgr = nil; mcpMu.Unlock()
+	tdMu.Lock()
+	tdIdx = nil
+	tdMu.Unlock()
+	mcpMu.Lock()
+	mcpMgr = nil
+	mcpMu.Unlock()
 	resetAssembly()
 	resetProactive()
 	return "OK"
