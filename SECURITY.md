@@ -4,15 +4,20 @@
 
 Please **do not** open a public issue for security vulnerabilities.
 
-Instead, use GitHub's **private vulnerability reporting** ("Security" tab → "Report a vulnerability"), or email the
-maintainer (see the repo profile). We aim to acknowledge within 7 days.
+Report privately through either channel:
 
-Please include: affected version/commit, a description, and a minimal reproduction if possible.
+- **GitHub private security advisory (preferred):** https://github.com/cjintao133-cell/star-river/security/advisories/new
+- **Email:** security@star-river.dev
+
+We aim to acknowledge within 7 days and to follow coordinated disclosure. Please include: affected
+version/commit, a description, and a minimal reproduction if possible.
+
+Preferred-Languages: en, zh
 
 ## Scope and current status (please read)
 
-This project is **v0.1.0-alpha** and **not yet externally security-audited**. The following parts are hardened but await
-independent review (see `KNOWN-ISSUES.md` §1):
+This project is **0.1.x (alpha)** and **not yet externally security-audited**. The following parts are
+hardened but await independent review (see `KNOWN-ISSUES.md` §1):
 
 - `kernel/store/crypto.go` — AES-GCM field encryption
 - `kernel/secret/{vault_windows.go,keybackup.go}` — DPAPI custody & encrypted backup
@@ -26,7 +31,7 @@ independent review (see `KNOWN-ISSUES.md` §1):
 
 | Version | Supported |
 |---|---|
-| 0.1.x-alpha | ✅ (best effort) |
+| 0.1.x (alpha) | ✅ (best effort) |
 
 ## Disclosure
 
