@@ -63,9 +63,36 @@ fun ContactsTab(config: ChatConfig, app: AppState, onOpenMessages: () -> Unit) {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             try {
-                val text = ctx.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
-                val c = parseCardJson(text)
-                if (c != null) { formTarget = c; formIsNew = true; showForm = true } else err = "角色卡解析失败（需 Character Card V2 JSON）"
+                val bytes = ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
+                // 先用内核 cards 解析（支持 V1/V2/V3 JSON、PNG tEXt、charx zip）；失败回退旧 JSON 解析。
+                Bg.run({ Mobilebind.parseCharacterCard(bytes) }) { raw ->
+                    var c: CharUi? = null
+                    if (!raw.startsWith("ERR:")) {
+                        try {
+                            val o = org.json.JSONObject(raw)
+                            val alt = mutableListOf<String>()
+                            o.optJSONArray("alternate_greetings")?.let { a -> for (i in 0 until a.length()) alt.add(a.optString(i)) }
+                            c = CharUi(
+                                id = "c-" + System.currentTimeMillis(),
+                                name = o.optString("name"),
+                                description = o.optString("description"),
+                                personality = o.optString("personality"),
+                                scenario = o.optString("scenario"),
+                                firstMes = o.optString("first_mes"),
+                                alternateGreetings = alt,
+                                mesExample = o.optString("mes_example"),
+                                systemPrompt = o.optString("system_prompt"),
+                                postHistory = o.optString("post_history_instructions"),
+                                characterBook = o.optString("character_book"),
+                            )
+                        } catch (e: Exception) { c = null }
+                    }
+                    if (c == null) { // 回退旧解析
+                        try { c = parseCardJson(String(bytes, Charsets.UTF_8)) } catch (e: Exception) {}
+                    }
+                    if (c != null) { formTarget = c; formIsNew = true; showForm = true }
+                    else err = "角色卡解析失败（V1/V2/V3 JSON、PNG、charx 均可）"
+                }
             } catch (t: Throwable) { err = "读取失败：" + (t.message ?: "?") }
         }
     }

@@ -31,12 +31,19 @@ var (
 	ErrC      = errors.New("vector: native call failed")
 )
 
-// Index int8 量化向量索引（并发安全：内部互斥串行化 cgo 调用）。
-type Index struct {
+// vecOwner 共享所有权状态：锁/句柄/关闭标记/finalizer 全集中于此。
+// Index 只持一个 *vecOwner 指针；按值复制 Index 只复制指针 → 单一 owner，杜绝双句柄双释放
+// （修复 astra 评审 P0：vector Index 按值复制导致两份锁/closed 指向同一 C 指针）。
+type vecOwner struct {
 	mu     sync.Mutex
 	dim    int
 	p      *C.SrVecIndex
 	closed bool
+}
+
+// Index int8 量化向量索引（并发安全）。薄包装，按值复制安全（共享同一 vecOwner）。
+type Index struct {
+	o *vecOwner
 }
 
 // NewIndex 建索引（dim>0）。
@@ -48,57 +55,61 @@ func NewIndex(dim int) (*Index, error) {
 	if p == nil {
 		return nil, ErrC
 	}
-	ix := &Index{dim: dim, p: p}
-	runtime.SetFinalizer(ix, (*Index).finalize)
-	return ix, nil
+	o := &vecOwner{dim: dim, p: p}
+	runtime.SetFinalizer(o, (*vecOwner).finalize)
+	return &Index{o: o}, nil
 }
 
-// finalize 兜底释放（忘记 Close 时）；REVIEW-NEEDED 句柄生命周期。
-func (ix *Index) finalize() { ix.Close() }
+// finalize 兜底释放（owner 回收时）；REVIEW-NEEDED 句柄生命周期。
+func (o *vecOwner) finalize() { o.close() }
 
-// Close 释放底层索引；幂等。
-func (ix *Index) Close() error {
-	ix.mu.Lock()
-	defer ix.mu.Unlock()
-	if ix.closed {
+func (o *vecOwner) close() error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.closed {
 		return nil
 	}
-	if ix.p != nil {
-		C.sr_vec_index_free(ix.p)
-		ix.p = nil
+	if o.p != nil {
+		C.sr_vec_index_free(o.p)
+		o.p = nil
 	}
-	ix.closed = true
-	runtime.SetFinalizer(ix, nil)
+	o.closed = true
+	runtime.SetFinalizer(o, nil)
 	return nil
 }
 
+// Close 释放底层索引；幂等。
+func (ix *Index) Close() error { return ix.o.close() }
+
 // Len 当前条数。
 func (ix *Index) Len() int {
-	ix.mu.Lock()
-	defer ix.mu.Unlock()
-	if ix.closed {
+	o := ix.o
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.closed {
 		return 0
 	}
-	return int(C.sr_vec_index_count(ix.p))
+	return int(C.sr_vec_index_count(o.p))
 }
 
 // Dim 维度。
-func (ix *Index) Dim() int { return ix.dim }
+func (ix *Index) Dim() int { return ix.o.dim }
 
 // Insert 插入一条 int8 向量（长度须等于 dim）。
 func (ix *Index) Insert(id int64, vec []int8) error {
-	if len(vec) != ix.dim {
+	o := ix.o
+	if len(vec) != o.dim {
 		return ErrBadDim
 	}
-	ix.mu.Lock()
-	defer ix.mu.Unlock()
-	if ix.closed {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.closed {
 		return ErrClosed
 	}
 	// 复制到 C 内存（C 不持 Go 指针）。
 	cb := C.CBytes(int8ToBytes(vec))
 	defer C.free(cb)
-	if C.sr_vec_index_insert(ix.p, C.int64_t(id), (*C.int8_t)(cb)) != 0 {
+	if C.sr_vec_index_insert(o.p, C.int64_t(id), (*C.int8_t)(cb)) != 0 {
 		return ErrC
 	}
 	return nil
@@ -112,15 +123,16 @@ type Hit struct {
 
 // Search 返回 top-k（余弦降序）。
 func (ix *Index) Search(query []int8, k int) ([]Hit, error) {
-	if len(query) != ix.dim {
+	o := ix.o
+	if len(query) != o.dim {
 		return nil, ErrBadDim
 	}
 	if k <= 0 {
 		return nil, nil
 	}
-	ix.mu.Lock()
-	defer ix.mu.Unlock()
-	if ix.closed {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.closed {
 		return nil, ErrClosed
 	}
 	qb := C.CBytes(int8ToBytes(query))
@@ -132,7 +144,7 @@ func (ix *Index) Search(query []int8, k int) ([]Hit, error) {
 	defer C.free(idsMem)
 	defer C.free(scoresMem)
 
-	n := int(C.sr_vec_index_search(ix.p, (*C.int8_t)(qb), C.int(k),
+	n := int(C.sr_vec_index_search(o.p, (*C.int8_t)(qb), C.int(k),
 		(*C.int64_t)(idsMem), (*C.float)(scoresMem)))
 	if n <= 0 {
 		return nil, nil
@@ -148,14 +160,15 @@ func (ix *Index) Search(query []int8, k int) ([]Hit, error) {
 
 // Serialize 序列化为字节（持久化用；由调用方存入 store/文件）。
 func (ix *Index) Serialize() ([]byte, error) {
-	ix.mu.Lock()
-	defer ix.mu.Unlock()
-	if ix.closed {
+	o := ix.o
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.closed {
 		return nil, ErrClosed
 	}
 	var buf *C.uint8_t
 	var ln C.size_t
-	if C.sr_vec_index_serialize(ix.p, &buf, &ln) != 0 {
+	if C.sr_vec_index_serialize(o.p, &buf, &ln) != 0 {
 		return nil, ErrC
 	}
 	defer C.sr_free(unsafe.Pointer(buf))
@@ -173,9 +186,9 @@ func Deserialize(data []byte) (*Index, error) {
 	if p == nil {
 		return nil, ErrC
 	}
-	ix := &Index{p: p, dim: dimFromSerialized(data)}
-	runtime.SetFinalizer(ix, (*Index).finalize)
-	return ix, nil
+	o := &vecOwner{p: p, dim: dimFromSerialized(data)}
+	runtime.SetFinalizer(o, (*vecOwner).finalize)
+	return &Index{o: o}, nil
 }
 
 // dimFromSerialized 从序列化头解析维度（与 vector.c 格式一致：magic4|dim i32le|count i32le）。
