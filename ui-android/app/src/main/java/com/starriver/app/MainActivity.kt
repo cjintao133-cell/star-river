@@ -45,6 +45,13 @@ import mobilebind.ChatSink
 import mobilebind.Mobilebind
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicLong
+import android.content.Context
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Card
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
+import org.json.JSONArray
 
 /** UI 消息（不可变；流式更新靠替换列表元素触发重组）。 */
 data class UiMessage(
@@ -64,11 +71,134 @@ private val idGen = AtomicLong(1L)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        KernelBoot.ensure(this)
         val initial = ConfigStore.load(this)
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    App(initialConfig = initial) { cfg -> ConfigStore.save(this, cfg) }
+            StarRiverRoot(initialConfig = initial) { cfg -> ConfigStore.save(this, cfg) }
+        }
+    }
+}
+
+@Composable
+private fun StarRiverRoot(initialConfig: ChatConfig, persist: (ChatConfig) -> Unit) {
+    var config by remember { mutableStateOf(initialConfig) }
+    var tab by remember { mutableStateOf(0) }
+    var themeMode by remember { mutableStateOf(ThemeMode.DAY) }
+    AppTheme(themeMode) {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when (tab) {
+                    0 -> ChatTab(config) { tab = 3 }
+                    1 -> ContactsTab()
+                    2 -> CommunityTab()
+                    else -> Column(Modifier.fillMaxSize()) {
+                        ThemeBar(themeMode) { themeMode = it }
+                        SettingsScreen(
+                            initial = config,
+                            canCancel = true,
+                            onCancel = { tab = 0 },
+                            onSave = { cfg -> config = cfg; persist(cfg); tab = 0 },
+                        )
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                TabBtn("💬 消息", 0, tab) { tab = it }
+                TabBtn("👤 联系人", 1, tab) { tab = it }
+                TabBtn("🌐 社区", 2, tab) { tab = it }
+                TabBtn("⚙ 设置", 3, tab) { tab = it }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabBtn(label: String, idx: Int, cur: Int, onSel: (Int) -> Unit) {
+    TextButton(onClick = { onSel(idx) }) {
+        Text(
+            label, fontSize = 12.sp,
+            fontWeight = if (cur == idx) FontWeight.Bold else FontWeight.Normal,
+            color = if (cur == idx) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun ThemeBar(mode: ThemeMode, onChange: (ThemeMode) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("主题", fontWeight = FontWeight.Bold)
+        OutlinedButton(onClick = { onChange(ThemeMode.DAY) }, enabled = mode != ThemeMode.DAY) { Text("卡其日间") }
+        OutlinedButton(onClick = { onChange(ThemeMode.NIGHT) }, enabled = mode != ThemeMode.NIGHT) { Text("夜间流星") }
+    }
+}
+
+@Composable
+private fun ChatTab(config: ChatConfig, onOpenSettings: () -> Unit) {
+    val sessions = remember { mutableStateListOf(UiSession(idGen.getAndIncrement(), "对话 1")) }
+    var currentId by remember { mutableStateOf(sessions.first().id) }
+    var busy by remember { mutableStateOf(false) }
+    var input by remember { mutableStateOf("") }
+    ChatScreen(
+        config = config,
+        sessions = sessions,
+        currentId = currentId,
+        onSelect = { currentId = it },
+        busy = busy,
+        setBusy = { busy = it },
+        input = input,
+        setInput = { input = it },
+        onOpenSettings = onOpenSettings,
+    )
+}
+
+@Composable
+private fun ContactsTab() {
+    var name by remember { mutableStateOf("") }
+    var list by remember { mutableStateOf("") }
+    var err by remember { mutableStateOf("") }
+    val h = remember { Handler(Looper.getMainLooper()) }
+
+    fun refresh() {
+        Thread {
+            val r = try { Mobilebind.listCharacters() } catch (t: Throwable) { "ERR:" + (t.message ?: "?") }
+            h.post { list = r }
+        }.start()
+    }
+    LaunchedEffect(Unit) { refresh() }
+
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("联系人（角色）", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("角色名") }, modifier = Modifier.weight(1f), singleLine = true)
+            Button(onClick = {
+                val n = name.trim(); if (n.isEmpty()) return@Button
+                val id = "c-" + System.currentTimeMillis()
+                val js = JSONObject().put("id", id).put("name", n).toString()
+                Thread {
+                    val r = try { Mobilebind.createCharacter(js) } catch (t: Throwable) { "ERR:" + (t.message ?: "?") }
+                    h.post { if (r == "OK") { name = ""; err = ""; refresh() } else err = r }
+                }.start()
+            }) { Text("创建") }
+        }
+        if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp)
+        Text("导入角色卡 / 头像 / 编辑 → 阶段 B", fontSize = 11.sp, color = Color.Gray)
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (list.startsWith("ERR:")) {
+                item { Text(list, color = Color.Red) }
+            } else {
+                val arr = try { JSONArray(list) } catch (e: Exception) { JSONArray() }
+                items(arr.length()) { i ->
+                    val o = arr.optJSONObject(i)
+                    Card(Modifier.fillMaxWidth()) {
+                        Text(o?.optString("name").orEmpty().ifEmpty { "?" }, modifier = Modifier.padding(12.dp))
+                    }
                 }
             }
         }
@@ -76,37 +206,10 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun App(initialConfig: ChatConfig, persist: (ChatConfig) -> Unit) {
-    var config by remember { mutableStateOf(initialConfig) }
-    var editing by remember { mutableStateOf(!initialConfig.isConfigured) }
-    val sessions = remember { mutableStateListOf(UiSession(idGen.getAndIncrement(), "对话 1")) }
-    var currentId by remember { mutableStateOf(sessions.first().id) }
-    var busy by remember { mutableStateOf(false) }
-    var input by remember { mutableStateOf("") }
-
-    if (editing) {
-        SettingsScreen(
-            initial = config,
-            canCancel = config.isConfigured,
-            onCancel = { editing = false },
-            onSave = { cfg ->
-                config = cfg
-                persist(cfg)
-                editing = false
-            },
-        )
-    } else {
-        ChatScreen(
-            config = config,
-            sessions = sessions,
-            currentId = currentId,
-            onSelect = { currentId = it },
-            busy = busy,
-            setBusy = { busy = it },
-            input = input,
-            setInput = { input = it },
-            onOpenSettings = { editing = true },
-        )
+private fun CommunityTab() {
+    Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("社区", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("论坛体（帖子/回复）+ MCP 插件集市 → 阶段 B", color = Color.Gray, fontSize = 12.sp)
     }
 }
 
