@@ -1,45 +1,94 @@
 package mobilebind
 
-// 工具调用循环（"主脑会用 MCP 工具"的主心骨，T-M6-03 主脑调用链路）。
-// 流程：把启用插件的工具定义喂给模型 → 模型若发起 tool_calls → 经 kernel/tool.Manager
-// 执行 → 结果回填 → 再次对话，直至无工具调用（或达轮数上限）。全程脱敏错误。
-// 红线：只用开源底座 kernel/{adapter/openai,tool,core/types,orchestrator}，不 import 闭源插件。
+// 工具调用循环（"主脑会用 MCP 工具"主心骨，T-M6-03）+ 工具发现（接入 kernel/tooldisc 两段式）。
+//
+// 上下文优化（防撑爆）：
+//   - 工具总数 <= inlineToolCap：直接下发全部 schema（简单场景）。
+//   - 工具总数 >  inlineToolCap：只下发 tool_search 元工具 + 按用户消息关键词预筛的少量工具；
+//     模型可用 tool_search 搜索其余工具，命中后下一轮再懒取 schema 注入。footprint 有界。
+//
+// 红线：只用开源底座 kernel/{adapter/openai,tool,tooldisc,core/types,orchestrator}，不 import 闭源插件。
 
 import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"star-river/kernel/adapter/openai"
 	"star-river/kernel/core/types"
 	"star-river/kernel/orchestrator"
 	"star-river/kernel/tool"
+	"star-river/kernel/tooldisc"
 )
 
-const toolLoopMaxRounds = 4
+const (
+	toolLoopMaxRounds = 4
+	inlineToolCap     = 24 // 超过此数量则启用两段式发现
+	prefilterLimit    = 12 // 两段式下按需预筛下发条数
+)
 
-// toolSnapshot 取当前启用插件的工具定义 + 工具名→服务器 归属表（加锁后释放再调用）。
-func toolSnapshot() ([]openai.ToolDef, map[string]string, *tool.Manager) {
-	mcpMu.Lock()
-	mgr := mcpEnsure()
-	qts := mgr.Tools()
-	mcpMu.Unlock()
+var (
+	tdMu  sync.Mutex
+	tdIdx *tooldisc.Index
+)
 
-	defs := make([]openai.ToolDef, 0, len(qts))
-	owner := make(map[string]string, len(qts))
-	for _, qt := range qts {
-		if qt.Tool.Name == "" {
-			continue
-		}
-		owner[qt.Tool.Name] = qt.Server
-		defs = append(defs, openai.ToolDef{Name: qt.Tool.Name, Description: qt.Tool.Description, Parameters: qt.Tool.InputSchema})
+// toolIndex 返回 tooldisc 索引（基于内核 SQLite，惰性建表）。无 store 时返回 nil。
+func toolIndex() *tooldisc.Index {
+	tdMu.Lock()
+	defer tdMu.Unlock()
+	if tdIdx != nil {
+		return tdIdx
 	}
-	return defs, owner, mgr
+	kbMu.Lock()
+	st := kbStore
+	kbMu.Unlock()
+	if st == nil {
+		return nil
+	}
+	ix, err := tooldisc.NewIndex(st)
+	if err != nil {
+		return nil
+	}
+	tdIdx = ix
+	return tdIdx
 }
 
-// flattenResult 把 MCP 工具结果压成文本（仅 text 内容拼接；其余类型忽略）。
+// syncIndex 把当前启用插件工具同步进索引（按 server 整体替换）。返回 (总工具数, 存在的server集合)。
+func syncIndex(ctx context.Context, qts []tool.QualifiedTool) int {
+	ix := toolIndex()
+	if ix == nil {
+		return len(qts)
+	}
+	byServer := map[string][]tooldisc.IndexedTool{}
+	for _, qt := range qts {
+		byServer[qt.Server] = append(byServer[qt.Server], tooldisc.IndexedTool{Tool: qt.Tool})
+	}
+	for srv, items := range byServer {
+		_ = ix.ReplaceServer(ctx, srv, items)
+	}
+	return len(qts)
+}
+
+// scoreTool 关键词重叠打分（name/title/desc 命中用户词）。
+func scoreTool(m tooldisc.ToolMeta, terms []string) int {
+	if len(terms) == 0 {
+		return 0
+	}
+	hay := strings.ToLower(m.Name + " " + m.Title + " " + m.ShortDesc + " " + m.Category)
+	score := 0
+	for _, t := range terms {
+		if t != "" && strings.Contains(hay, t) {
+			score++
+		}
+	}
+	return score
+}
+
+// flattenResult 把 MCP 工具结果压成文本（仅 text 内容拼接；其余忽略）。
 func flattenResult(cr *tool.CallResult) string {
 	if cr == nil {
 		return ""
@@ -59,7 +108,86 @@ func flattenResult(cr *tool.CallResult) string {
 	return sb.String()
 }
 
-// ChatStreamTools 带工具调用的流式对话（纯文本用户消息）。无工具时等价普通对话。
+// keywords 从用户文本粗切关键词（空白/标点分隔，保底用小写子串）。
+func keywords(s string) []string {
+	s = strings.ToLower(s)
+	f := strings.FieldsFunc(s, func(r rune) bool {
+		return r == ' ' || r == '\n' || r == '\t' || r == '，' || r == '。' || r == ',' || r == '.' || r == '?' || r == '！' || r == '!'
+	})
+	out := make([]string, 0, len(f)*2)
+	for _, w := range f {
+		r := []rune(w)
+		if len(r) < 2 {
+			continue
+		}
+		out = append(out, w)
+		// 中文无空格：额外生成 2 字 bigram，提升与中文描述的匹配（英文名仍可能不中，靠 tool_search 兜底）
+		if len(r) >= 2 && hasCJK(w) {
+			for i := 0; i+2 <= len(r); i++ {
+				out = append(out, string(r[i:i+2]))
+			}
+		}
+	}
+	return out
+}
+
+// hasCJK 是否含中日韩字符。
+func hasCJK(s string) bool {
+	for _, r := range s {
+		if r >= 0x4E00 && r <= 0x9FFF {
+			return true
+		}
+	}
+	return false
+}
+
+// toolPlan 计算本轮下发的工具定义（可能为空=不带工具）。
+func toolPlan(ctx context.Context, qts []tool.QualifiedTool, userMsg string) []openai.ToolDef {
+	total := syncIndex(ctx, qts)
+	defs := make([]openai.ToolDef, 0, len(qts))
+	for _, qt := range qts {
+		if qt.Tool.Name == "" {
+			continue
+		}
+		defs = append(defs, openai.ToolDef{Name: qt.Tool.Name, Description: qt.Tool.Description, Parameters: qt.Tool.InputSchema})
+	}
+	if total <= inlineToolCap {
+		return defs // 小量：直发全部
+	}
+	// 大量：tool_search + 关键词预筛
+	ix := toolIndex()
+	if ix == nil {
+		return defs // 无索引可用：退回直发（保持可用性）
+	}
+	out := []openai.ToolDef{searchToolDef(ix)}
+	metas, _ := ix.Search(ctx, "", tooldisc.SearchOptions{Limit: 500})
+	terms := keywords(userMsg)
+	sort.SliceStable(metas, func(i, j int) bool {
+		return scoreTool(metas[i], terms) > scoreTool(metas[j], terms)
+	})
+	added := 0
+	for _, m := range metas {
+		if added >= prefilterLimit {
+			break
+		}
+		if m.Name == tooldisc.SearchToolName {
+			continue
+		}
+		if sc, ok, serr := ix.Schema(ctx, m.Server, m.Name); ok && serr == nil && len(sc) > 0 {
+			out = append(out, openai.ToolDef{Name: m.Name, Description: m.ShortDesc, Parameters: sc})
+			added++
+		}
+	}
+	return out
+}
+
+// searchToolDef 把 tooldisc 的 tool_search 定义转为 openai.ToolDef。
+func searchToolDef(ix *tooldisc.Index) openai.ToolDef {
+	d := tooldisc.NewSearchTool(ix).Definition()
+	return openai.ToolDef{Name: d.Name, Description: d.Description, Parameters: d.InputSchema}
+}
+
+// ChatStreamTools 带工具调用的流式对话（纯文本用户消息）。
 func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink) {
 	if sink == nil {
 		return
@@ -70,10 +198,10 @@ func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink)
 	}
 	c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
 	msgs := orchestrator.BuildMinimal(system, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
-	runChatLoop(c, apiKey, model, msgs, sink)
+	runChatLoop(c, apiKey, model, msgs, user, sink)
 }
 
-// ChatStreamImage 多模态：用户消息带一张图（base64）+ 文本，仍走工具循环。图可为空则等价纯文本。
+// ChatStreamImage 多模态：用户消息带一张图（base64）+ 文本，仍走工具循环。
 func ChatStreamImage(baseURL, apiKey, model, system, user, imageB64, imageMIME string, sink ChatSink) {
 	if sink == nil {
 		return
@@ -92,7 +220,7 @@ func ChatStreamImage(baseURL, apiKey, model, system, user, imageB64, imageMIME s
 	}
 	c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
 	msgs := orchestrator.BuildMinimal(system, nil, um, orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
-	runChatLoop(c, apiKey, model, msgs, sink)
+	runChatLoop(c, apiKey, model, msgs, user, sink)
 }
 
 // decodeImage 解 base64 图像（去 data URI 前缀）。空/非法返回 false。
@@ -102,7 +230,7 @@ func decodeImage(b64 string) ([]byte, bool) {
 		return nil, false
 	}
 	if i := strings.Index(b64, ","); i >= 0 && strings.Contains(b64[:i], "base64") {
-		b64 = b64[i+1:] // data:image/png;base64,XXXX
+		b64 = b64[i+1:]
 	}
 	data, err := base64.StdEncoding.DecodeString(b64)
 	if err != nil || len(data) == 0 {
@@ -111,11 +239,21 @@ func decodeImage(b64 string) ([]byte, bool) {
 	return data, true
 }
 
-// runChatLoop 执行工具调用循环（c/msgs 已就绪）。sink 收全部正文增量。
-func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, sink ChatSink) {
-	defs, owner, mgr := toolSnapshot()
+// runChatLoop 执行工具调用循环。sink 收全部正文增量。
+func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, userMsg string, sink ChatSink) {
 	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancel()
+
+	mcpMu.Lock()
+	mgr := mcpEnsure()
+	qts := mgr.Tools()
+	mcpMu.Unlock()
+	defs := toolPlan(ctx, qts, userMsg)
+	owner := make(map[string]string, len(qts))
+	for _, qt := range qts {
+		owner[qt.Tool.Name] = qt.Server
+	}
+	ix := toolIndex()
 
 	for round := 0; round < toolLoopMaxRounds; round++ {
 		var roundText strings.Builder
@@ -135,7 +273,7 @@ func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, s
 			}
 		}
 		res, err := c.Chat(ctx, req, emitFn)
-		// 兜底：本模型不支持 tools 参数 → 去掉工具重试一次（后续不再带工具），避免装了插件却把聊天搞崩。
+		// 兜底：模型不支持 tools → 去掉工具重试一次。
 		if err != nil && len(defs) > 0 && roundText.Len() == 0 && len(calls) == 0 {
 			defs = nil
 			req.Tools = nil
@@ -157,7 +295,22 @@ func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, s
 			asst.Blocks = append(asst.Blocks, types.ContentBlock{Type: types.BlockToolUse, Call: &calls[i]})
 		}
 		msgs = append(msgs, asst)
+
+		have := map[string]bool{}
+		for _, d := range defs {
+			have[d.Name] = true
+		}
 		for _, call := range calls {
+			if call.Name == tooldisc.SearchToolName && ix != nil {
+				// 两段式第一步：执行 tool_search，并懒加载命中工具的 schema 供下一轮
+				res2, _ := tooldisc.NewSearchTool(ix).Execute(ctx, json.RawMessage(call.Arguments))
+				txt := flattenResult(res2)
+				msgs = append(msgs, types.Message{Role: types.RoleTool, Blocks: []types.ContentBlock{
+					{Type: types.BlockToolResult, CallID: call.ID, Text: txt},
+				}})
+				defs = lazyAddDiscovered(ctx, ix, call.Arguments, defs, have)
+				continue
+			}
 			text, isErr := runToolCall(ctx, mgr, owner, call)
 			msgs = append(msgs, types.Message{Role: types.RoleTool, Blocks: []types.ContentBlock{
 				{Type: types.BlockToolResult, CallID: call.ID, Text: text, IsError: isErr},
@@ -167,7 +320,34 @@ func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, s
 	sink.OnDone(model)
 }
 
-// runToolCall 执行一次工具调用，返回文本与是否错误。
+// lazyAddDiscovered 依据 tool_search 的 query 命中项，把尚未下发的工具 schema 追加到 defs（去重有上限）。
+func lazyAddDiscovered(ctx context.Context, ix *tooldisc.Index, argsJSON string, defs []openai.ToolDef, have map[string]bool) []openai.ToolDef {
+	var p struct {
+		Query string `json:"query"`
+	}
+	_ = json.Unmarshal([]byte(argsJSON), &p)
+	metas, err := ix.Search(ctx, p.Query, tooldisc.SearchOptions{Limit: prefilterLimit})
+	if err != nil {
+		return defs
+	}
+	add := 0
+	for _, m := range metas {
+		if add >= prefilterLimit {
+			break
+		}
+		if have[m.Name] || m.Name == tooldisc.SearchToolName {
+			continue
+		}
+		if sc, ok, serr := ix.Schema(ctx, m.Server, m.Name); ok && serr == nil && len(sc) > 0 {
+			defs = append(defs, openai.ToolDef{Name: m.Name, Description: m.ShortDesc, Parameters: sc})
+			have[m.Name] = true
+			add++
+		}
+	}
+	return defs
+}
+
+// runToolCall 执行一次 MCP 工具调用，返回文本与是否错误。
 func runToolCall(ctx context.Context, mgr *tool.Manager, owner map[string]string, call types.ToolCall) (string, bool) {
 	server, ok := owner[call.Name]
 	if !ok {
