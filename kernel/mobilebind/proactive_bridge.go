@@ -123,6 +123,8 @@ func ProactiveTick() string {
 
 	if nudges == nil {
 		nudges = []proactive.Nudge{}
+	} else if len(nudges) > 0 {
+		_ = BusPublish("proactive.fired", "proactive")
 	}
 	b, _ := json.Marshal(nudges)
 	return string(b)

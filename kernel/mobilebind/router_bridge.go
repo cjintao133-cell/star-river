@@ -105,7 +105,7 @@ func sendWithFailover(ctx context.Context, baseURL, apiKey, model string, msgs [
 	caller := router.CallerFunc(func(c context.Context, ep router.Endpoint, emit func(types.StreamEvent)) (string, error) {
 		return dispatch(normalizeProvider(ep.Name), ep.BaseURL, ep.APIKey, ep.Model, msgs, defs, emit)
 	})
-	r, err := router.New(eps, caller, router.WithAllowHigherTier(true))
+	r, err := router.New(eps, caller, router.WithAllowHigherTier(true), router.WithPublisher(busPublisher()))
 	if err != nil {
 		return "", err
 	}

@@ -248,6 +248,11 @@ func observeTurn(userText, assistantText string) {
 	asmMood.Tick()
 	persistMoodLocked()
 	persistMemLocked()
+	// 事件背板：本轮记忆/情绪变化发门铃（供 UI 事件流/审计）。
+	_ = BusPublish("memory.turn", "assembly")
+	if strings.TrimSpace(assistantText) != "" {
+		_ = BusPublish("mood.changed", "assembly")
+	}
 }
 
 func truncate(s string, n int) string {

@@ -34,6 +34,7 @@ fun DiagScreen(onBack: () -> Unit) {
     var dumps by remember { mutableStateOf<List<Triple<String, Long, Long>>>(emptyList()) }
     var viewName by remember { mutableStateOf("") }
     var viewContent by remember { mutableStateOf("") }
+    var events by remember { mutableStateOf("") }
 
     fun refresh() {
         Bg.async({ Diag.listDumps() }) { r ->
@@ -48,6 +49,7 @@ fun DiagScreen(onBack: () -> Unit) {
     }
     LaunchedEffect(Unit) {
         Bg.async({ Diag.privacyBoundary() }) { privacy = it as? String ?: "" }
+        Bg.async({ mobilebind.Mobilebind.busRecent() }) { events = it as? String ?: "" }
         refresh()
     }
 
@@ -82,6 +84,14 @@ fun DiagScreen(onBack: () -> Unit) {
                     Text("dump：$viewName", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Text(viewContent, fontSize = 10.sp, fontFamily = FontFamily.Monospace, lineHeight = 13.sp)
                 }
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
+                Text("最近事件流（总线）", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                if (events.isBlank()) Text("暂无", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else Text(events, fontSize = 10.sp, fontFamily = FontFamily.Monospace, lineHeight = 13.sp)
             }
         }
 
