@@ -292,3 +292,46 @@ func TestChatCommentsAndPingTolerated(t *testing.T) {
 		t.Errorf("events = %+v, want %+v", evs, want)
 	}
 }
+
+// blockAfterReader 先吐出 data，之后永久阻塞（永不 EOF），模拟"发了 message_stop 但连接不关"。
+type blockAfterReader struct {
+	data []byte
+}
+
+func (b *blockAfterReader) Read(p []byte) (int, error) {
+	if len(b.data) > 0 {
+		n := copy(p, b.data)
+		b.data = b.data[n:]
+		return n, nil
+	}
+	select {} // 永久阻塞
+}
+
+// message_stop 收到即完成：即使连接不反回 EOF，也不应挂起/误判超时。
+func TestConsumeStreamEarlyReturnOnMessageStop(t *testing.T) {
+	sse := "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"m\",\"model\":\"claude-x\",\"usage\":{\"input_tokens\":1}}}\n\n" +
+		"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"hi\"}}\n\n" +
+		"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+	c := New("http://127.0.0.1", testKey)
+	r := &blockAfterReader{data: []byte(sse)}
+	type ret struct {
+		res *ChatResult
+		err error
+	}
+	ch := make(chan ret, 1)
+	go func() {
+		res, err := c.consumeStream(r, "rid", func(types.StreamEvent) {})
+		ch <- ret{res, err}
+	}()
+	select {
+	case got := <-ch:
+		if got.err != nil {
+			t.Fatalf("应成功, got err=%v", got.err)
+		}
+		if got.res.FinishReason == "" && got.res.Model != "claude-x" {
+			t.Logf("res=%+v", got.res)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("message_stop 后未提前返回（仍在等 EOF）")
+	}
+}

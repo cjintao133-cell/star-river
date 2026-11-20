@@ -90,6 +90,9 @@ func (r *Repo) GetSession(ctx context.Context, id string) (Session, error) {
 	}
 	defer rows.Close()
 	if !rows.Next() {
+		if e := rows.Err(); e != nil {
+			return s, e
+		}
 		return s, ErrSessionNotFound
 	}
 	if err := rows.Scan(&s.ID, &s.Title, &s.Model, &s.CreatedAt, &s.UpdatedAt); err != nil {
@@ -194,6 +197,9 @@ func (r *Repo) GetMessage(ctx context.Context, id string) (MessageRecord, error)
 	}
 	defer rows.Close()
 	if !rows.Next() {
+		if e := rows.Err(); e != nil {
+			return rec, e
+		}
 		return rec, ErrMessageNotFound
 	}
 	if err := r.scanMessage(rows, &rec); err != nil {

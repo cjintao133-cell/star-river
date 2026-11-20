@@ -209,7 +209,22 @@ func (r *Router) publishSwitch(from, to Endpoint) {
 }
 
 // Plan 暴露当前路由计划（主+过滤后备用），供 UI/排障展示与测试断言。
-func (r *Router) Plan() []Endpoint { return r.attempts() }
+func (r *Router) Plan() []PlanEntry {
+	atts := r.attempts()
+	out := make([]PlanEntry, 0, len(atts))
+	for _, ep := range atts {
+		out = append(out, PlanEntry{Name: ep.Name, BaseURL: ep.BaseURL, Model: ep.Model, Tier: ep.Tier})
+	}
+	return out
+}
+
+// PlanEntry 计划展示条目（无密钥，供 UI/排障）。绝不含 APIKey（红线3）。
+type PlanEntry struct {
+	Name    string
+	BaseURL string
+	Model   string
+	Tier    PriceTier
+}
 
 // Describe 单端点简述（排障用，不含 key）。
 func (ep Endpoint) Describe() string {

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -50,6 +51,7 @@ func redact(s, apiKey string) string {
 	if apiKey != "" {
 		s = strings.ReplaceAll(s, apiKey, "[REDACTED]")
 	}
+	s = scrubURL(s)
 	if len(s) > maxErrBody {
 		s = strings.ToValidUTF8(s[:maxErrBody], "")
 	}
@@ -148,4 +150,15 @@ func apiErrorFromBody(status int, header http.Header, body []byte, apiKey string
 		e.Kind = KindStreamUnsupported
 	}
 	return e
+}
+
+// urlRe 匹配 http(s) URL；http.Client.Do 的错误常含完整请求 URL（红线3 泄漏点）。
+var urlRe = regexp.MustCompile(`https?://[^\s"']+`)
+
+// scrubURL 把错误串里的 URL 替换为占位（下发/落盘前脱敏）。
+func scrubURL(s string) string {
+	if !strings.Contains(s, "://") {
+		return s
+	}
+	return urlRe.ReplaceAllString(s, "[REDACTED_URL]")
 }

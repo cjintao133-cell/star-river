@@ -82,6 +82,9 @@ func scanEvents(r io.Reader, apiKey string, onEvent func(wireEvent) error) error
 			return &APIError{Kind: KindProtocol, Message: "sse data not JSON: " + redact(data, apiKey)}
 		}
 		if err := onEvent(ev); err != nil {
+			if errors.Is(err, errStopScan) {
+				return nil
+			}
 			return err
 		}
 	}
@@ -93,3 +96,7 @@ func scanEvents(r io.Reader, apiKey string, onEvent func(wireEvent) error) error
 	}
 	return nil
 }
+
+// errStopScan 内部哨兵：调用方收到终止事件（message_stop）后可提前结束扫描，
+// 避免等待连接 EOF 导致把已完成的回复误判为超时。
+var errStopScan = errors.New("anthropic: stop scan")

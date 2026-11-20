@@ -417,6 +417,7 @@ func (c *Client) consumeStream(r io.Reader, rid string, emit func(types.StreamEv
 			}
 		case "message_stop":
 			sawStop = true
+			return errStopScan
 		case "ping":
 			// 心跳，忽略。
 		case "error":

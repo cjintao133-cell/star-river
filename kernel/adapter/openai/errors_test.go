@@ -142,3 +142,13 @@ func TestAPIErrorFromBodyP4(t *testing.T) {
 		t.Errorf("P4 redaction: %q", e.Message)
 	}
 }
+
+func TestRedactScrubsURL(t *testing.T) {
+	out := redact(`Get "https://api.example.com/v1/chat?x=1": connection reset`, testKey)
+	if strings.Contains(out, "https://") {
+		t.Errorf("URL 未清洗: %q", out)
+	}
+	if !strings.Contains(out, "[REDACTED_URL]") {
+		t.Errorf("应含占位: %q", out)
+	}
+}
