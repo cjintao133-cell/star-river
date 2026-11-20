@@ -19,22 +19,22 @@ jobs:
       actions: read
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - name: run scorecard
-        uses: ossf/scorecard-action@v2.4.4
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
       - name: upload sarif
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@d2aacf54c2fbc910db8d7ec338fdb54ea48c692d # v3
         with:
           sarif_file: results.sarif
           category: scorecard
       - name: upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: scorecard-results
           path: results.sarif
