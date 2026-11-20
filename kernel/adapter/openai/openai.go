@@ -30,7 +30,15 @@ type ChatRequest struct {
 	Model        string
 	Messages     []types.Message
 	MaxTokens    int
-	NativeSearch bool // 启用模型原生网页搜索（OpenAI: web_search_options + search-preview 模型）
+	NativeSearch bool     // 启用模型原生网页搜索（OpenAI: web_search_options + search-preview 模型）
+	Tools        []ToolDef // 工具定义（function calling）；空则不传 tools 参数
+}
+
+// ToolDef 一个可调用工具的定义（供 function calling）。Parameters 为 JSON Schema。
+type ToolDef struct {
+	Name        string
+	Description string
+	Parameters  json.RawMessage
 }
 
 // ChatResult 一次成功调用的元数据。Model 为实际应答模型（中转掉包信号，
@@ -136,6 +144,16 @@ type wireOutMessage struct {
 	ToolCallID string            `json:"tool_call_id,omitempty"`
 }
 
+type wireToolFn struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Parameters  json.RawMessage `json:"parameters"`
+}
+type wireToolIn struct {
+	Type     string     `json:"type"`
+	Function wireToolFn `json:"function"`
+}
+
 type wireOutToolCall struct {
 	ID       string `json:"id"`
 	Type     string `json:"type"`
@@ -229,9 +247,23 @@ func buildBody(req ChatRequest, stream bool) ([]byte, error) {
 		MaxTokens        int              `json:"max_tokens"`
 		Stream           bool             `json:"stream"`
 		WebSearchOptions *struct{}        `json:"web_search_options,omitempty"`
+		Tools            []wireToolIn     `json:"tools,omitempty"`
 	}{Model: req.Model, Messages: msgs, MaxTokens: req.MaxTokens, Stream: stream}
 	if req.NativeSearch {
 		body.WebSearchOptions = &struct{}{}
+	}
+	for _, td := range req.Tools {
+		if td.Name == "" {
+			continue
+		}
+		params := td.Parameters
+		if len(params) == 0 {
+			params = json.RawMessage(`{"type":"object","properties":{}}`)
+		}
+		body.Tools = append(body.Tools, wireToolIn{
+			Type: "function",
+			Function: wireToolFn{Name: td.Name, Description: td.Description, Parameters: params},
+		})
 	}
 	return json.Marshal(body)
 }

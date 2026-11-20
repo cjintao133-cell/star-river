@@ -179,7 +179,7 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String) {
             override fun onDone(model: String) { h.post { finished = true } }
             override fun onError(msg: String) { h.post { errMsg = "[错误] " + msg } }
         }
-        Bg.run({ Mobilebind.chatStream(config.baseUrl, config.apiKey, config.model, system, text, sink); "OK" }) {}
+        Bg.run({ Mobilebind.chatStreamTools(config.baseUrl, config.apiKey, config.model, system, text, sink); "OK" }) {}
         h.postDelayed(tick, 18)
     }
 
