@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import mobilebind.ChatSink
 import mobilebind.Mobilebind
+import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicLong
 
 /** UI 消息（不可变；流式更新靠替换列表元素触发重组）。 */
@@ -75,7 +79,6 @@ class MainActivity : ComponentActivity() {
 private fun App(initialConfig: ChatConfig, persist: (ChatConfig) -> Unit) {
     var config by remember { mutableStateOf(initialConfig) }
     var editing by remember { mutableStateOf(!initialConfig.isConfigured) }
-    // 会话状态提升到顶层：切到设置页再回来，聊天记录不丢。
     val sessions = remember { mutableStateListOf(UiSession(idGen.getAndIncrement(), "对话 1")) }
     var currentId by remember { mutableStateOf(sessions.first().id) }
     var busy by remember { mutableStateOf(false) }
@@ -119,25 +122,71 @@ private fun SettingsScreen(
     var key by remember { mutableStateOf(initial.apiKey) }
     var model by remember { mutableStateOf(initial.model) }
     var system by remember { mutableStateOf(initial.system) }
+    var note by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    val uiHandler = remember { Handler(Looper.getMainLooper()) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    fun probe() {
+        if (busy) return
+        busy = true
+        note = "校验中…"
+        val b = base.trim(); val k = key.trim(); val m = model.trim()
+        Thread {
+            val raw = try { Mobilebind.probeEndpoint(b, k, m) } catch (t: Throwable) {
+                uiHandler.post { note = "异常: " + (t.message ?: "?"); busy = false }
+                return@Thread
+            }
+            uiHandler.post {
+                try {
+                    val o = JSONObject(raw)
+                    note = if (o.optBoolean("ok")) {
+                        "✅ 可用（模型 " + o.optString("model") + "）"
+                    } else {
+                        "❌ " + o.optString("category") +
+                            (if (o.has("requestId") && o.optString("requestId").isNotEmpty()) " · id=" + o.optString("requestId") else "") +
+                            (if (o.has("error")) "\n" + o.optString("error") else "")
+                    }
+                } catch (e: Exception) { note = raw }
+                busy = false
+            }
+        }.start()
+    }
+
+    fun listModels() {
+        if (busy) return
+        busy = true
+        note = "拉取模型…"
+        val b = base.trim(); val k = key.trim()
+        Thread {
+            val raw = try { Mobilebind.listModels(b, k) } catch (t: Throwable) { "ERR:" + (t.message ?: "?") }
+            uiHandler.post {
+                note = if (raw.startsWith("ERR:")) "拉取失败：" + raw.removePrefix("ERR:") else raw
+                busy = false
+            }
+        }.start()
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         Text("设置", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("填入中转/端点（OpenAI 兼容）即可聊天", fontSize = 12.sp, color = Color.Gray)
+        Text("端点（OpenAI 兼容）。key 经 Android Keystore 加密保存，不落明文。", fontSize = 12.sp, color = Color.Gray)
         Column(modifier = Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(value = base, onValueChange = { base = it }, label = { Text("端点 base（如 https://api.siliconflow.cn/v1）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = key, onValueChange = { key = it }, label = { Text("API Key") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+            OutlinedTextField(value = base, onValueChange = { base = it }, label = { Text("端点 base") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(value = key, onValueChange = { key = it }, label = { Text("API Key（已加密存储）") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
             OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("模型 id") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = system, onValueChange = { system = it }, label = { Text("人设 system") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 onSave(ChatConfig(base.trim(), key.trim(), model.trim(), system))
-            }, enabled = base.isNotBlank() && key.isNotBlank() && model.isNotBlank()) {
-                Text("保存并开始")
-            }
-            if (canCancel) {
-                TextButton(onClick = onCancel) { Text("取消") }
-            }
+            }, enabled = base.isNotBlank() && key.isNotBlank() && model.isNotBlank()) { Text("保存并开始") }
+            if (canCancel) TextButton(onClick = onCancel) { Text("取消") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { probe() }, enabled = !busy && base.isNotBlank() && model.isNotBlank()) { Text("校验端点") }
+            OutlinedButton(onClick = { listModels() }, enabled = !busy && base.isNotBlank()) { Text("拉取模型") }
+        }
+        if (note.isNotEmpty()) {
+            Text(note, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp), color = Color(0xFF444444))
         }
     }
 }
@@ -168,7 +217,6 @@ private fun ChatScreen(
         msgs.add(placeholder)
         val idx = msgs.size - 1
 
-        // 打字机节奏（拟真延迟）：网络再快也按节奏吐字，短回复顺、长回复追得上。
         val target = StringBuilder()
         var revealed = 0
         var finished = false
@@ -181,9 +229,7 @@ private fun ChatScreen(
             val e = errMsg
             if (e != null) {
                 msgs[idx] = msgs[idx].copy(text = e, streaming = false)
-                setBusy(false)
-                stopped = true
-                return@Runnable
+                setBusy(false); stopped = true; return@Runnable
             }
             val full = target.toString()
             if (revealed < full.length) {
@@ -194,23 +240,16 @@ private fun ChatScreen(
                 uiHandler.postDelayed(tick, 18)
             } else if (finished) {
                 msgs[idx] = msgs[idx].copy(text = full, streaming = false)
-                setBusy(false)
-                stopped = true
+                setBusy(false); stopped = true
             } else {
                 uiHandler.postDelayed(tick, 18)
             }
         }
 
         val sink = object : ChatSink {
-            override fun onDelta(s: String) {
-                uiHandler.post { target.append(s) }
-            }
-            override fun onDone(model: String) {
-                uiHandler.post { finished = true }
-            }
-            override fun onError(msg: String) {
-                uiHandler.post { errMsg = "[错误] " + msg }
-            }
+            override fun onDelta(s: String) { uiHandler.post { target.append(s) } }
+            override fun onDone(model: String) { uiHandler.post { finished = true } }
+            override fun onError(msg: String) { uiHandler.post { errMsg = "[错误] " + msg } }
         }
         uiHandler.post(tick)
         Thread {
@@ -230,8 +269,7 @@ private fun ChatScreen(
             Text("示例角色", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
             TextButton(onClick = {
                 val s = UiSession(idGen.getAndIncrement(), "对话 ${sessions.size + 1}")
-                sessions.add(s)
-                onSelect(s.id)
+                sessions.add(s); onSelect(s.id)
             }) { Text("＋新对话", color = Color.White) }
             TextButton(onClick = onOpenSettings) { Text("设置", color = Color.White) }
         }
