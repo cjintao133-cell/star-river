@@ -9,7 +9,7 @@ import (
 
 // MaxUserChars：超长用户输入被截断到上限（不可裁层也要有封顶）。
 func TestBuildMinimalMaxUserChars(t *testing.T) {
-	long := strings.Repeat("用户", 100) // 100 个 rune
+	long := strings.Repeat("字", 100) // 100 个 rune
 	user := txt(types.RoleUser, long)
 	got := textsOf(BuildMinimal("P", nil, user, Limits{MaxUserChars: 10}))
 	total := 0

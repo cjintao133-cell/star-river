@@ -94,7 +94,9 @@ func TestVisualSelfieRequiresPersona(t *testing.T) {
 }
 
 func TestVisualNotInit(t *testing.T) {
-	visMu.Lock(); visSvc = nil; visMu.Unlock()
+	visMu.Lock()
+	visSvc = nil
+	visMu.Unlock()
 	if got := VisualGenerateImage("x", 8, 8); !strings.Contains(got, "not initialized") {
 		t.Fatalf("应未初始化: %q", got)
 	}

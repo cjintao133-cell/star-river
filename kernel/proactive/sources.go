@@ -106,11 +106,11 @@ func weekdayAllowed(days []time.Weekday, d time.Weekday) bool {
 	return false
 }
 
-// DefaultScheduleEntries 一批示例日程（催吃饭/早睡）；宿主可整表替换。
+// DefaultScheduleEntries 一批示例日程（吃饭/休息）；宿主可整表替换或置空。
 func DefaultScheduleEntries() []ScheduleEntry {
 	return []ScheduleEntry{
-		{Key: "meal_lunch", Title: "吃午饭了吗", Body: "到点啦，别又忘了吃饭，用户。", Priority: PriorityNormal, AtMinutes: 12 * 60},
-		{Key: "sleep", Title: "该睡了", Body: "夜深了，去睡觉，别熬夜。", Priority: PriorityNormal, AtMinutes: 23 * 60, WindowMinutes: 60},
+		{Key: "meal_lunch", Title: "午餐提醒", Body: "到点了，记得按时吃饭。", Priority: PriorityNormal, AtMinutes: 12 * 60},
+		{Key: "sleep", Title: "休息提醒", Body: "夜深了，注意休息。", Priority: PriorityNormal, AtMinutes: 23 * 60, WindowMinutes: 60},
 	}
 }
 
@@ -187,12 +187,10 @@ func compareOp(v float64, op CompareOp, th float64) bool {
 	}
 }
 
-// DefaultEmotionRules 示例情绪规则（疲劳高→劝休息；亲密低→主动靠近）；宿主可整表替换或置空。
+// DefaultEmotionRules 示例情绪规则（疲劳高→劝休息）；宿主可整表替换或置空。
 func DefaultEmotionRules() []EmotionRule {
 	return []EmotionRule{
 		{Key: "fatigue_rest", Dimension: "fatigue", Op: OpGE, Threshold: 0.8, Priority: PriorityHigh,
-			Title: "歇一会儿吧", Body: "看你累成这样，我不许你再勉强了，起来走两步、喝口水。"},
-		{Key: "intimacy_reach", Dimension: "intimacy", Op: OpLE, Threshold: 0.12, Priority: PriorityLow,
-			Title: "有点想你", Body: "好久没好好说话了……回应我嘛。"},
+			Title: "休息一下", Body: "看起来有些疲劳，起身活动一下会好些。"},
 	}
 }
