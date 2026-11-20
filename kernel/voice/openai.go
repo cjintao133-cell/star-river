@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"star-river/kernel/netx"
 )
 
 // defaultTimeout 默认 HTTP 超时（语音文件较大，放宽）。
@@ -30,7 +32,7 @@ type OpenAIClient struct {
 func NewOpenAIClient(baseURL, apiKey string) *OpenAIClient {
 	return &OpenAIClient{
 		BaseURL: strings.TrimRight(baseURL, "/"),
-		HTTP:    &http.Client{Timeout: defaultTimeout},
+		HTTP:    netx.Client(defaultTimeout),
 		apiKey:  apiKey,
 	}
 }

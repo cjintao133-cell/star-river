@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"star-river/kernel/netx"
 )
 
 // BraveProvider Brave Search API 适配器（GET /res/v1/web/search）。
@@ -68,7 +70,7 @@ func (p *BraveProvider) Search(ctx context.Context, q Query) ([]Result, error) {
 
 	hc := p.HTTP
 	if hc == nil {
-		hc = &http.Client{Timeout: defaultHTTPTimeout}
+		hc = netx.Client(defaultHTTPTimeout)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {

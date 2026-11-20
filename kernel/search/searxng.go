@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"star-river/kernel/netx"
 )
 
 // defaultHTTPTimeout 适配器默认 HTTP 超时。
@@ -65,7 +67,7 @@ func (p *SearXNGProvider) Search(ctx context.Context, q Query) ([]Result, error)
 
 	hc := p.HTTP
 	if hc == nil {
-		hc = &http.Client{Timeout: defaultHTTPTimeout}
+		hc = netx.Client(defaultHTTPTimeout)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
@@ -106,7 +108,7 @@ func (p *SearXNGProvider) Healthy(ctx context.Context) error {
 	}
 	hc := p.HTTP
 	if hc == nil {
-		hc = &http.Client{Timeout: defaultHTTPTimeout}
+		hc = netx.Client(defaultHTTPTimeout)
 	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(p.BaseURL, "/")+"/", nil)
 	resp, err := hc.Do(req)

@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"star-river/kernel/netx"
 )
 
 // defaultImageHTTPTimeout 默认 HTTP 超时。
@@ -69,7 +71,7 @@ func (b *OpenAIImageBackend) Generate(ctx context.Context, req GenerateRequest) 
 	if len(req.ImageRef) > 0 {
 		hc := b.HTTP
 		if hc == nil {
-			hc = &http.Client{Timeout: defaultImageHTTPTimeout}
+			hc = netx.Client(defaultImageHTTPTimeout)
 		}
 		return b.generateEdit(ctx, hc, req, model)
 	}
@@ -92,7 +94,7 @@ func (b *OpenAIImageBackend) Generate(ctx context.Context, req GenerateRequest) 
 	}
 	hc := b.HTTP
 	if hc == nil {
-		hc = &http.Client{Timeout: defaultImageHTTPTimeout}
+		hc = netx.Client(defaultImageHTTPTimeout)
 	}
 	url := strings.TrimRight(b.BaseURL, "/") + "/images/generations"
 	hreq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(raw))
@@ -230,7 +232,10 @@ func (b *OpenAIImageBackend) fetchImage(ctx context.Context, hc *http.Client, ur
 	if err != nil {
 		return nil, &APIError{Kind: "protocol", Message: err.Error()}
 	}
-	resp, err := hc.Do(req)
+	// 图片下载是无凭据 GET（响应里的 b64 或公网 URL），允许跳转，避免 CDN 302 误伤；
+	// 与携带凭据的 images 接口 client 解耦（后者禁跟随重定向）。
+	dl := &http.Client{Timeout: defaultImageHTTPTimeout}
+	resp, err := dl.Do(req)
 	if err != nil {
 		return nil, &APIError{Kind: "network", Message: err.Error()}
 	}

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"star-river/kernel/netx"
 )
 
 // maxBodyBytes 单次响应体读取上限（JSON 分支）。
@@ -38,7 +40,7 @@ type StreamableHTTPTransport struct {
 // NewStreamableHTTPTransport 建传输层。extra 头会逐请求附带（不改动调用方 Header）。
 func NewStreamableHTTPTransport(endpoint string, client *http.Client, extra http.Header) *StreamableHTTPTransport {
 	if client == nil {
-		client = &http.Client{Timeout: defaultHTTPTimeout}
+		client = netx.Client(defaultHTTPTimeout)
 	}
 	return &StreamableHTTPTransport{
 		Endpoint: strings.TrimSpace(endpoint),
