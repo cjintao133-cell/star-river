@@ -21,13 +21,14 @@ func ParsePNG(b []byte) (*Card, error) {
 		return nil, ErrUnknown
 	}
 	off := 8
+	n := uint64(len(b))
 	var candidates []string // 优先 ccv3，其次 chara
-	for off+8 <= len(b) {
-		length := int(binary.BigEndian.Uint32(b[off : off+4]))
+	for uint64(off)+8 <= n {
+		length := uint64(binary.BigEndian.Uint32(b[off : off+4])) // 用 uint64，杜绝 32 位 int 溢出
 		typ := string(b[off+4 : off+8])
-		dataStart := off + 8
+		dataStart := uint64(off) + 8
 		dataEnd := dataStart + length
-		if length < 0 || dataEnd+4 > len(b) { // 越界防抖
+		if dataEnd+4 > n { // 越界防抖（uint64 加法，无符号回绕不可能到这）
 			break
 		}
 		data := b[dataStart:dataEnd]
@@ -52,7 +53,7 @@ func ParsePNG(b []byte) (*Card, error) {
 
 			goto parse
 		}
-		off = dataEnd + 4 // 跳过 CRC
+		off = int(dataEnd) + 4 // 跳过 CRC
 	}
 parse:
 	for _, txt := range candidates {
