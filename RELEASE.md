@@ -5,7 +5,7 @@
 
 ## 这是什么
 一个伴侣型 AI 的**内核底座**：通用底层（事件总线 / 多协议适配 / SQLite 存储 / 工具与 MCP / 七层上下文编排）
-+ 可插拔「伴侣插件包」（记忆遗忘曲线 / 五维情绪 / 主动调度）。底座保持干净、可单独编译；
++ 可插拔「能力插件包」（记忆遗忘曲线 / 五维情绪 / 主动调度）。底座保持干净、可单独编译；
 数据与密钥全在本地，凭据只经平台 Keystore/DPAPI。
 
 ## 仓库内容
@@ -15,7 +15,7 @@ kernel/     Go 内核（26 个包）：adapter(openai/anthropic/gemini/router) o
             backup diag compliance i18n netx native(vector) mobilebind desktopbind …
 native/     C/H（device_probe、vector 等），含 Makefile 三平台静态库
 cmd/        srchat / livecheck / stresssim（CLI 与调试工具）
-scripts/    check-open-split.sh（底座零依赖伴侣插件包的分层校验）等
+scripts/    check-open-split.sh（底座零依赖能力插件包的分层校验）等
 docs/       架构、契约、评审记录
 ```
 规模：Go 生产 ≈ 19k 行 / 137 文件；C/H ≈ 0.6k 行。

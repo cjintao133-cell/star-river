@@ -13,9 +13,9 @@
 | kernel/adapter | openai/anthropic/gemini 三协议 + 发现/分类/灾备 | 开源 |
 | kernel/orchestrator | 七层上下文 + 预算分配 + 摘要接力 | 开源 |
 | kernel/store | SQLite WAL 单写 + AES-GCM 字段加密 | 开源 |
-| kernel/hippocampus | 遗忘曲线记忆引擎（伴侣插件包） | 开源 |
-| kernel/endocrine | 五维情绪状态机（伴侣插件包） | 开源 |
-| kernel/proactive | 主动调度（伴侣插件包） | 开源 |
+| kernel/hippocampus | 遗忘曲线记忆引擎（能力插件包） | 开源 |
+| kernel/endocrine | 五维情绪状态机（能力插件包） | 开源 |
+| kernel/proactive | 主动调度（能力插件包） | 开源 |
 | kernel/cards | V2/V3/chara PNG 角色卡解析 | 开源 |
 | kernel/tool | 远程 MCP + Windows stdio + 内置工具 | 开源 |
 | kernel/visual | 视觉配方/生成适配/AI 水印（不可关） | 开源 |
@@ -24,7 +24,7 @@
 | ui-android / ui-desktop | Kotlin Compose / Compose Multiplatform | 开源（参考实现，WIP） |
 | svc-dist | manifest/CDN/ed25519 签名/更新链 | 开源 |
 
-分层约束：底座包不得 import 伴侣插件包（hippocampus/endocrine/proactive）；反向允许。全部包均以 Apache-2.0 开源。
+分层约束：底座包不得 import 能力插件包（hippocampus/endocrine/proactive）；反向允许。全部包均以 Apache-2.0 开源。
 
 ## 通信约定
 - 命令/查询：直接接口调用（同步，可追堆栈可管超时）。

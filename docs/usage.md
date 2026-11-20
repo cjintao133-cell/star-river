@@ -18,7 +18,7 @@ go build ./...          # 编译全仓
 go vet ./...            # 静态检查
 go test ./kernel/...    # 内核单测（并发包建议加 -race）
 
-# 分层依赖守卫（底座不依赖伴侣插件包）
+# 分层依赖守卫（底座不依赖能力插件包）
 sh scripts/check-open-split.sh
 
 # C 热点模块（可选，生成三平台静态库到 build/native/）
