@@ -46,6 +46,47 @@ type ChatResult struct {
 	Usage        Usage
 	Degraded     bool
 	RequestID    string
+	Sources      []Citation // 网页搜索引用来源（NativeSearch 时）
+}
+
+// Citation 一条搜索引用来源。
+type Citation struct {
+	URL   string `json:"url"`
+	Title string `json:"title"`
+}
+
+// webResultItem web_search_tool_result 的单条结果。
+type webResultItem struct {
+	Type  string `json:"type"`
+	URL   string `json:"url"`
+	Title string `json:"title"`
+}
+
+// collectWebResults 解析 web_search_tool_result.content（数组）追加去重来源。
+func collectWebResults(dst []Citation, raw json.RawMessage) []Citation {
+	if len(raw) == 0 {
+		return dst
+	}
+	var items []webResultItem
+	if json.Unmarshal(raw, &items) != nil {
+		return dst
+	}
+	for _, it := range items {
+		if it.URL == "" {
+			continue
+		}
+		dup := false
+		for _, c := range dst {
+			if c.URL == it.URL {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			dst = append(dst, Citation{URL: it.URL, Title: it.Title})
+		}
+	}
+	return dst
 }
 
 // Client 并发安全：字段构造后只读，http.Client 自身并发安全。
@@ -410,6 +451,9 @@ func (c *Client) consumeStream(r io.Reader, rid string, emit func(types.StreamEv
 				calls[ev.Index] = &types.ToolCall{ID: ev.ContentBlock.ID, Name: ev.ContentBlock.Name}
 				jsonBuf[ev.Index] = &strings.Builder{}
 			}
+			if ev.ContentBlock != nil && ev.ContentBlock.Type == "web_search_tool_result" {
+				res.Sources = collectWebResults(res.Sources, ev.ContentBlock.Content)
+			}
 		case "content_block_delta":
 			if ev.Delta != nil {
 				switch ev.Delta.Type {
@@ -513,6 +557,8 @@ func (c *Client) consumeJSON(r io.Reader, rid string, emit func(types.StreamEven
 			if cb.Thinking != "" {
 				emit(types.StreamEvent{Kind: types.StreamReasoning, Text: cb.Thinking})
 			}
+		case "web_search_tool_result":
+			res.Sources = collectWebResults(res.Sources, cb.Content)
 		case "tool_use":
 			args := ""
 			if len(cb.Input) > 0 && string(cb.Input) != "null" {

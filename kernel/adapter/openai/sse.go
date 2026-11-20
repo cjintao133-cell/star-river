@@ -29,10 +29,20 @@ type wireToolCall struct {
 // wireDelta 流式增量（delta）与非流式整消息（message）共用结构。
 // reasoning_content 为推理模型扩展字段（DeepSeek 系）。
 type wireDelta struct {
-	Role             string         `json:"role"`
-	Content          string         `json:"content"`
-	ReasoningContent string         `json:"reasoning_content"`
-	ToolCalls        []wireToolCall `json:"tool_calls"`
+	Role             string           `json:"role"`
+	Content          string           `json:"content"`
+	ReasoningContent string           `json:"reasoning_content"`
+	ToolCalls        []wireToolCall   `json:"tool_calls"`
+	Annotations      []wireAnnotation `json:"annotations"`
+}
+
+// wireAnnotation 网页搜索引用标注（url_citation）。
+type wireAnnotation struct {
+	Type        string `json:"type"`
+	URLCitation struct {
+		URL   string `json:"url"`
+		Title string `json:"title"`
+	} `json:"url_citation"`
 }
 
 type wireChoice struct {

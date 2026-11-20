@@ -43,6 +43,33 @@ type ChatResult struct {
 	Usage        Usage
 	Degraded     bool
 	RequestID    string
+	Sources      []Citation // 网页搜索引用来源（NativeSearch 时）
+}
+
+// Citation 一条搜索引用来源。
+type Citation struct {
+	URL   string `json:"url"`
+	Title string `json:"title"`
+}
+
+// addSources 追加去重的引用来源。
+func addSources(dst []Citation, anns []wireAnnotation) []Citation {
+	for _, a := range anns {
+		if a.Type != "url_citation" || a.URLCitation.URL == "" {
+			continue
+		}
+		dup := false
+		for _, c := range dst {
+			if c.URL == a.URLCitation.URL {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			dst = append(dst, Citation{URL: a.URLCitation.URL, Title: a.URLCitation.Title})
+		}
+	}
+	return dst
 }
 
 // Client 并发安全：字段构造后只读，http.Client 自身并发安全。
@@ -360,6 +387,9 @@ func (c *Client) consumeStream(r io.Reader, rid string, emit func(types.StreamEv
 			if d.Content != "" {
 				emit(types.StreamEvent{Kind: types.StreamDelta, Text: d.Content})
 			}
+			if len(d.Annotations) > 0 {
+				res.Sources = addSources(res.Sources, d.Annotations)
+			}
 			for _, tc := range d.ToolCalls {
 				cur := calls[tc.Index]
 				if cur == nil {
@@ -427,6 +457,7 @@ func (c *Client) consumeJSON(r io.Reader, rid string, emit func(types.StreamEven
 		res.Usage = usageFrom(ch.Usage)
 	}
 	m := choice.Message
+	res.Sources = addSources(res.Sources, m.Annotations)
 	if m.ReasoningContent != "" {
 		emit(types.StreamEvent{Kind: types.StreamReasoning, Text: m.ReasoningContent})
 	}

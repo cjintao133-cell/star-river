@@ -23,6 +23,7 @@ type wireContentBlock struct {
 	Text     string          `json:"text"`
 	Thinking string          `json:"thinking"`
 	Input    json.RawMessage `json:"input"`
+	Content  json.RawMessage `json:"content"` // web_search_tool_result 的结果数组
 }
 
 // wireDelta 流增量。text_delta 用 Text；input_json_delta 用 PartialJSON（tool_use 参数续段）；

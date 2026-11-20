@@ -47,13 +47,24 @@ type wirePromptFeedback struct {
 	BlockReason string `json:"blockReason"`
 }
 
+// wireGroundingMetadata 原生搜索（googleSearch）的引用元数据。
+type wireGroundingMetadata struct {
+	GroundingChunks []struct {
+		Web struct {
+			URI   string `json:"uri"`
+			Title string `json:"title"`
+		} `json:"web"`
+	} `json:"groundingChunks"`
+}
+
 // wireGenerateResponse generateContent / streamGenerateContent 的响应chunk外壳。
 // 增补⑤：HTTP 200 也可能混入 error，必须判失败。
 type wireGenerateResponse struct {
-	Candidates     []wireResponseCandidate `json:"candidates"`
-	UsageMetadata  *wireUsageMetadata      `json:"usageMetadata,omitempty"`
-	PromptFeedback *wirePromptFeedback     `json:"promptFeedback,omitempty"`
-	Error          *wireError              `json:"error,omitempty"`
+	Candidates        []wireResponseCandidate `json:"candidates"`
+	UsageMetadata     *wireUsageMetadata      `json:"usageMetadata,omitempty"`
+	PromptFeedback    *wirePromptFeedback     `json:"promptFeedback,omitempty"`
+	GroundingMetadata *wireGroundingMetadata  `json:"groundingMetadata,omitempty"`
+	Error             *wireError              `json:"error,omitempty"`
 }
 
 // scanSSE 逐行解析 Gemini alt=sse 事件流：

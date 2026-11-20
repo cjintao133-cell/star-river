@@ -43,6 +43,36 @@ type ChatResult struct {
 	Usage        Usage
 	Degraded     bool
 	RequestID    string
+	Sources      []Citation // 原生搜索引用来源（NativeSearch 时）
+}
+
+// Citation 一条搜索引用来源。
+type Citation struct {
+	URL   string `json:"url"`
+	Title string `json:"title"`
+}
+
+// collectGrounding 从 groundingMetadata 追加去重来源。
+func collectGrounding(dst []Citation, gm *wireGroundingMetadata) []Citation {
+	if gm == nil {
+		return dst
+	}
+	for _, gc := range gm.GroundingChunks {
+		if gc.Web.URI == "" {
+			continue
+		}
+		dup := false
+		for _, c := range dst {
+			if c.URL == gc.Web.URI {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			dst = append(dst, Citation{URL: gc.Web.URI, Title: gc.Web.Title})
+		}
+	}
+	return dst
 }
 
 // Client 并发安全：字段构造后只读，http.Client 自身并发安全。
@@ -436,6 +466,9 @@ func (c *Client) consumeStream(r io.Reader, rid, model string, emit func(types.S
 		if ch.PromptFeedback != nil && ch.PromptFeedback.BlockReason != "" {
 			blocked = ch.PromptFeedback.BlockReason
 		}
+		if ch.GroundingMetadata != nil {
+			res.Sources = collectGrounding(res.Sources, ch.GroundingMetadata)
+		}
 		for _, cand := range ch.Candidates {
 			for _, p := range cand.Content.Parts {
 				if p.FunctionCall != nil {
@@ -509,6 +542,7 @@ func (c *Client) consumeJSON(r io.Reader, rid, model string, emit func(types.Str
 		return nil, &APIError{Kind: KindProtocol, RequestID: rid, Message: "missing finishReason"}
 	}
 	res := &ChatResult{Model: model, FinishReason: cand.FinishReason, RequestID: rid, Usage: usageFrom(w.UsageMetadata)}
+	res.Sources = collectGrounding(res.Sources, w.GroundingMetadata)
 	toolIdx := 0
 	for _, p := range cand.Content.Parts {
 		if p.FunctionCall != nil {
