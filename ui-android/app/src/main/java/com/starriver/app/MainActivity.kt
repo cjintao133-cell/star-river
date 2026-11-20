@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         KernelBoot.ensure(this)
         Diag.install(this)
         ProtoPrefs.apply(this)
+        EmbedPrefs.apply(this)
         val initial = ConfigStore.load(this)
         setContent {
             StarRiverApp(initialConfig = initial) { cfg -> ConfigStore.save(this, cfg) }

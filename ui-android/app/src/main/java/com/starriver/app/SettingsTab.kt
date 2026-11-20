@@ -160,6 +160,9 @@ private fun AdvancedSettings(
     var imgModel by remember { mutableStateOf(ImagePrefs.model(ctx)) }
     var imgKey by remember { mutableStateOf(ImagePrefs.apiKey(ctx)) }
     var imgEditPath by remember { mutableStateOf(ImagePrefs.editPath(ctx)) }
+    var embBase by remember { mutableStateOf(EmbedPrefs.base(ctx)) }
+    var embModel by remember { mutableStateOf(EmbedPrefs.model(ctx)) }
+    var embKey by remember { mutableStateOf(EmbedPrefs.key(ctx)) }
     var chatProto by remember { mutableStateOf(ProtoPrefs.provider(ctx)) }
     var proStatus by remember { mutableStateOf(ProactiveUi.status()) }
     var backupNote by remember { mutableStateOf("") }
@@ -285,6 +288,11 @@ private fun AdvancedSettings(
         OutlinedTextField(value = imgEditPath, onValueChange = { imgEditPath = it }, label = { Text("图生图路径（默认 /images/edits，可留空）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Text("垫图=人设图；有垫图走图生图端点保角色一致性，无需 ComfyUI。", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
+        Text("语义记忆（embedding，可选；配了才有向量召回，否则关键词）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        OutlinedTextField(value = embBase, onValueChange = { embBase = it }, label = { Text("embedding 端点 base（可同聊天端点）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = embModel, onValueChange = { embModel = it }, label = { Text("embedding 模型（如 text-embedding-3-small）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = embKey, onValueChange = { embKey = it }, label = { Text("embedding API Key（加密存储）") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+
         Text("数据备份（换机/防丢）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { exportLauncher.launch("star-river-backup.zip") }) { Text("导出备份") }
@@ -305,6 +313,8 @@ private fun AdvancedSettings(
             ProtoPrefs.setProvider(ctx, chatProto); ProtoPrefs.apply(ctx)
             ImagePrefs.setBase(ctx, imgBase.trim()); ImagePrefs.setModel(ctx, imgModel.trim())
             ImagePrefs.setEditPath(ctx, imgEditPath.trim()); ImagePrefs.setApiKey(ctx, imgKey.trim())
+            EmbedPrefs.setBase(ctx, embBase.trim()); EmbedPrefs.setModel(ctx, embModel.trim()); EmbedPrefs.setKey(ctx, embKey.trim())
+            EmbedPrefs.apply(ctx)
             val vr = VisualCfg.initIfConfigured(ctx)
             saved = if (vr == "not-configured") "已保存（画图模型未配全）" else if (vr.startsWith("ERR")) "已保存，画图初始化失败：$vr" else "已保存，画图模型就绪"
         }, modifier = Modifier.padding(top = 8.dp)) { Text("保存进阶设置") }

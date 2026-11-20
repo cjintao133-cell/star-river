@@ -250,3 +250,20 @@ object ProtoPrefs {
     fun setProvider(ctx: Context, v: String) = p(ctx).edit().putString("chat.provider", v).apply()
     fun apply(ctx: Context) { try { Mobilebind.setChatProvider(provider(ctx)) } catch (t: Throwable) { } }
 }
+
+/** 语义记忆 embedding 模型配置：base/model 明文，key 走 SecretStore。 */
+object EmbedPrefs {
+    private const val PREF = "star_river_prefs"
+    private const val KEY_ID = "embed.api_key"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun base(ctx: Context): String = p(ctx).getString("embed.base", "") ?: ""
+    fun setBase(ctx: Context, v: String) = p(ctx).edit().putString("embed.base", v).apply()
+    fun model(ctx: Context): String = p(ctx).getString("embed.model", "") ?: ""
+    fun setModel(ctx: Context, v: String) = p(ctx).edit().putString("embed.model", v).apply()
+    fun key(ctx: Context): String = SecretStore.get(ctx, KEY_ID) ?: ""
+    fun setKey(ctx: Context, v: String) { if (v.isNotBlank()) SecretStore.put(ctx, KEY_ID, v) }
+    fun apply(ctx: Context) {
+        val b = base(ctx); val m = model(ctx); val k = key(ctx)
+        try { Mobilebind.setEmbeddingConfig(if (b.isNotBlank() && m.isNotBlank()) b else "", k, m) } catch (t: Throwable) { }
+    }
+}

@@ -113,6 +113,7 @@ func persistMemLocked() {
 func resetAssembly() {
 	asmMu.Lock()
 	asmMood, asmMem, asmRecs, asmLoaded = nil, nil, nil, false
+	vecIx, vecDim, vecSeq, vecMem, vecLoad = nil, 0, 0, nil, false
 	asmMu.Unlock()
 }
 
@@ -182,20 +183,28 @@ func assembleSystem(base, userMsg string) string {
 }
 
 func recallLocked(userMsg string, limit int) []hippocampus.Scored {
-	terms := keywords(userMsg)
-	hits := asmMem.RecallFromStore(func(m hippocampus.Memory) float64 {
-		hay := strings.ToLower(m.Text)
-		if len(terms) == 0 {
-			return 0.0
-		}
-		hit := 0
-		for _, t := range terms {
-			if t != "" && strings.Contains(hay, t) {
-				hit++
+	// 优先向量语义相似度；无向量则回退关键词重叠。
+	sims := vectorSimLocked(userMsg, 30)
+	var simFn func(m hippocampus.Memory) float64
+	if len(sims) > 0 {
+		simFn = func(m hippocampus.Memory) float64 { return sims[m.ID] }
+	} else {
+		terms := keywords(userMsg)
+		simFn = func(m hippocampus.Memory) float64 {
+			hay := strings.ToLower(m.Text)
+			if len(terms) == 0 {
+				return 0.0
 			}
+			hit := 0
+			for _, t := range terms {
+				if t != "" && strings.Contains(hay, t) {
+					hit++
+				}
+			}
+			return float64(hit) / float64(len(terms))
 		}
-		return float64(hit) / float64(len(terms))
-	})
+	}
+	hits := asmMem.RecallFromStore(simFn)
 	if len(hits) > limit {
 		hits = hits[:limit]
 	}
@@ -222,6 +231,7 @@ func observeTurn(userText, assistantText string) {
 		id := fmt.Sprintf("mem-%d", time.Now().UnixNano())
 		_ = asmMem.Encode(id, truncate(u, 300), imp, emo)
 		asmRecs = append(asmRecs, memRecord{ID: id, Text: truncate(u, 300), Imp: imp, Emo: emo})
+		embedMemoryLocked(id, truncate(u, 300))
 		if len(asmRecs) > memCap {
 			asmRecs = asmRecs[len(asmRecs)-memCap:]
 		}
