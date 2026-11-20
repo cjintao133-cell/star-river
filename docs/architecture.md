@@ -54,7 +54,7 @@
 - 平台能力表：docs/platform-capability.md（T-M6-02 前建立，M0 结论先记 m0-conclusions.md）。
 
 ## 工程纪律
-- UI 文案一律走字符串表，禁硬编码（增补 T-M2-07）。
+- UI 文案一律走字符串表，禁硬编码（增补 T-M2-07）：界面文案集中在 kernel/i18n（zh 默认 / en 齐全，go:embed JSON 资源），按 key 取值并支持 {占位}；新增语言表 key 必须与 zh 一致，由 scripts/check-i18n-keys.sh 守卫。禁止在 UI 代码里直接写死中英文文案。
 - 每提交门禁：go vet + staticcheck + 相关单测（并发包 -race）；core 覆盖率 ≥70%；C 加 ASan+Valgrind 串行零报告。
 - go test -p 2、make -j4、Xvfb 单实例；构建 TMPDIR=/root/build-tmp（/tmp 是 tmpfs）。
 - 测试只访问 mock server 与 localhost。
