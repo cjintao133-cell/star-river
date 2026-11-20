@@ -125,15 +125,15 @@ func (b *GenericImageBackend) Generate(ctx context.Context, req GenerateRequest)
 		model = b.Model
 	}
 	d := b.dialect()
+	// chat 型（Gemini 图像模型等）：文生图与图生图统一走 /chat/completions，图片内联返回。
+	if d.Img2ImgMode == Img2ImgChat {
+		return b.genChat(ctx, d, model, req)
+	}
 	if len(req.ImageRef) > 0 {
-		switch d.Img2ImgMode {
-		case Img2ImgEdits:
+		if d.Img2ImgMode == Img2ImgEdits {
 			return b.genEdits(ctx, d, model, req)
-		case Img2ImgChat:
-			return b.genChat(ctx, d, model, req)
-		default:
-			return b.genGenerations(ctx, d, model, req, true)
 		}
+		return b.genGenerations(ctx, d, model, req, true)
 	}
 	return b.genGenerations(ctx, d, model, req, false)
 }
@@ -242,14 +242,15 @@ func (b *GenericImageBackend) genEdits(ctx context.Context, d ImageDialect, mode
 
 // genChat 走 /chat/completions，把提示词+垫图作为 user 消息（image_url data URL）发出。
 func (b *GenericImageBackend) genChat(ctx context.Context, d ImageDialect, model string, req GenerateRequest) (GenerateResult, error) {
-	content := []map[string]any{
-		{"type": "text", "text": req.Prompt},
-	}
+	var content any
 	if len(req.ImageRef) > 0 {
-		content = append(content, map[string]any{
-			"type":      "image_url",
-			"image_url": map[string]any{"url": toDataURL(req.ImageRef)},
-		})
+		parts := []map[string]any{
+			{"type": "text", "text": req.Prompt},
+			{"type": "image_url", "image_url": map[string]any{"url": toDataURL(req.ImageRef)}},
+		}
+		content = parts
+	} else {
+		content = req.Prompt
 	}
 	body := map[string]any{
 		"model":    model,
@@ -393,6 +394,11 @@ func normalizeImageResponse(ctx context.Context, dl *http.Client, body []byte) (
 						return nil, err
 					}
 				}
+				// content 为字符串时：可能是 markdown ![](data:image/...;base64,xxx)
+				var cstr string
+				if json.Unmarshal(ch.Message.Content, &cstr) == nil && cstr != "" {
+					images = append(images, extractDataURLs(cstr)...)
+				}
 				// content 为数组时找 image_url
 				var parts []struct {
 					Type     string `json:"type"`
@@ -447,6 +453,49 @@ func snapImageSize(model string, w, h int) (string, bool) {
 		}
 	}
 	return fmt.Sprintf("%dx%d", best.w, best.h), (best.w != w || best.h != h)
+}
+
+// extractDataURLs 从任意字符串（含 markdown ![](data:image/...;base64,xxx)）中抽取并解码内联图像。
+func extractDataURLs(s string) [][]byte {
+	var out [][]byte
+	for {
+		i := strings.Index(s, "data:image/")
+		if i < 0 {
+			break
+		}
+		rest := s[i:]
+		comma := strings.Index(rest, ";base64,")
+		if comma < 0 {
+			s = rest[len("data:image/"):]
+			continue
+		}
+		start := comma + len(";base64,")
+		j := start
+		for j < len(rest) && isB64Byte(rest[j]) {
+			j++
+		}
+		if j > start {
+			if d, err := base64.StdEncoding.DecodeString(rest[start:j]); err == nil && len(d) > 0 {
+				out = append(out, d)
+			}
+		}
+		s = rest[j:]
+	}
+	return out
+}
+
+func isB64Byte(c byte) bool {
+	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '/' || c == '='
+}
+
+// DialectChatGemini 对话式出图方言（Gemini 图像模型 / Nano Banana 类）：统一走 chat/completions，
+// 图片以 markdown data-url 内联在回复正文。4sapi / 星链API 实测即此方言。
+func DialectChatGemini() ImageDialect {
+	return ImageDialect{
+		Name: "chat-gemini", Img2ImgMode: Img2ImgChat,
+		EditPath: "/images/edits", GenPath: "/images/generations", ChatPath: "/chat/completions",
+		SizeFields: nil, SendResponseFormat: false,
+	}
 }
 
 func abs(x int) int {

@@ -237,6 +237,8 @@ func makeImageBackend(base, key, model, backendName string) visual.ImageBackend 
 			d = visual.DialectOpenAI()
 		case "siliconflow", "sf":
 			d = visual.DialectSiliconFlow()
+		case "chat", "gemini", "4sapi", "chat-gemini":
+			d = visual.DialectChatGemini()
 		}
 		return &visual.GenericImageBackend{BaseURL: base, APIKey: key, Model: model, Dialect: d}
 	default:

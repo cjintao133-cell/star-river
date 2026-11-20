@@ -70,6 +70,8 @@ func VisualInit(cfgJSON string) string {
 			d = visual.DialectOpenAI()
 		case "siliconflow", "sf":
 			d = visual.DialectSiliconFlow()
+		case "chat", "gemini", "4sapi", "chat-gemini":
+			d = visual.DialectChatGemini()
 		case "", "generic":
 			d = visual.DialectGeneric()
 		}

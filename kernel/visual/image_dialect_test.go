@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -196,3 +197,86 @@ func TestGenericHTTPError(t *testing.T) {
 func netxClient() *http.Client { return &http.Client{} }
 
 var _ = multipart.NewWriter // 保留 import（multipart 仅在 server 端 ParseMultipartForm 用）
+
+func TestExtractDataURLs(t *testing.T) {
+	png := testPNG(t, 2, 2)
+	b64 := base64.StdEncoding.EncodeToString(png)
+	s := "画好啦 ![img](data:image/png;base64," + b64 + ") 完成"
+	got := extractDataURLs(s)
+	if len(got) != 1 || !bytes.Equal(got[0], png) {
+		t.Fatalf("extract=%d", len(got))
+	}
+}
+
+// chat 内容为 markdown data-url 字符串（Gemini 图像模型典型返回）。
+func TestNormalizeMarkdownContent(t *testing.T) {
+	png := testPNG(t, 2, 2)
+	b64 := base64.StdEncoding.EncodeToString(png)
+	body := `{"choices":[{"message":{"role":"assistant","content":"好 ![](data:image/png;base64,` + b64 + `)"}}]}`
+	imgs, err := normalizeImageResponse(context.Background(), netxClient(), []byte(body))
+	if err != nil || len(imgs) != 1 || !bytes.Equal(imgs[0], png) {
+		t.Fatalf("err=%v imgs=%d", err, len(imgs))
+	}
+}
+
+// chat 方言：纯文生图（无垫图）也走 /chat/completions，content 为字符串，返回 markdown 图。
+func TestDialectChatTextOnly(t *testing.T) {
+	png := testPNG(t, 2, 2)
+	b64 := base64.StdEncoding.EncodeToString(png)
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/chat/completions" {
+			t.Errorf("path=%s", r.URL.Path)
+		}
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"done ![](data:image/png;base64,` + b64 + `)"}}]}`))
+	}))
+	defer srv.Close()
+	b := &GenericImageBackend{BaseURL: srv.URL + "/v1", APIKey: "k", Model: "gemini-2.5-flash-image", Dialect: DialectChatGemini()}
+	res, err := b.Generate(context.Background(), GenerateRequest{Prompt: "画猫"})
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if len(res.Images) != 1 {
+		t.Fatalf("images=%d", len(res.Images))
+	}
+	msgs, _ := gotBody["messages"].([]any)
+	if len(msgs) != 1 {
+		t.Fatalf("messages=%v", gotBody["messages"])
+	}
+	m0, _ := msgs[0].(map[string]any)
+	if _, ok := m0["content"].(string); !ok {
+		t.Errorf("纯文生图 content 应为字符串，实际 %T", m0["content"])
+	}
+}
+
+// chat 方言 + 垫图：content 为多模态数组（含 image_url data URL）。
+func TestDialectChatEditImage(t *testing.T) {
+	png := testPNG(t, 2, 2)
+	b64 := base64.StdEncoding.EncodeToString(png)
+	var raw string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := json.Marshal(json.RawMessage(mustRead(r)))
+		raw = string(b)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"![](data:image/png;base64,` + b64 + `)"}}]}`))
+	}))
+	defer srv.Close()
+	b := &GenericImageBackend{BaseURL: srv.URL + "/v1", APIKey: "k", Model: "gemini-3-pro-image", Dialect: DialectChatGemini()}
+	res, err := b.Generate(context.Background(), GenerateRequest{Prompt: "改图", ImageRef: png, Width: 64, Height: 64})
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if len(res.Images) != 1 {
+		t.Fatalf("images=%d", len(res.Images))
+	}
+	if !strings.Contains(raw, "image_url") || !strings.Contains(raw, "data:image/") {
+		t.Errorf("垫图应走多模态 image_url: %.80s", raw)
+	}
+}
+
+func mustRead(r *http.Request) []byte {
+	b, _ := io.ReadAll(r.Body)
+	return b
+}
