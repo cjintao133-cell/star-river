@@ -241,3 +241,12 @@ object ImagePrefs {
     fun setApiKey(ctx: Context, v: String) { if (v.isNotBlank()) SecretStore.put(ctx, KEY_ID, v) }
     fun configured(ctx: Context): Boolean = base(ctx).isNotBlank() && model(ctx).isNotBlank()
 }
+
+/** 聊天协议 provider 偏好（openai/anthropic/gemini）。 */
+object ProtoPrefs {
+    private const val PREF = "star_river_prefs"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun provider(ctx: Context): String = p(ctx).getString("chat.provider", "openai") ?: "openai"
+    fun setProvider(ctx: Context, v: String) = p(ctx).edit().putString("chat.provider", v).apply()
+    fun apply(ctx: Context) { try { Mobilebind.setChatProvider(provider(ctx)) } catch (t: Throwable) { } }
+}

@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppCtx.ctx = applicationContext
         KernelBoot.ensure(this)
+        ProtoPrefs.apply(this)
         val initial = ConfigStore.load(this)
         setContent {
             StarRiverApp(initialConfig = initial) { cfg -> ConfigStore.save(this, cfg) }

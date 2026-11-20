@@ -156,9 +156,18 @@ private fun AdvancedSettings(
     var imgModel by remember { mutableStateOf(ImagePrefs.model(ctx)) }
     var imgKey by remember { mutableStateOf(ImagePrefs.apiKey(ctx)) }
     var imgEditPath by remember { mutableStateOf(ImagePrefs.editPath(ctx)) }
+    var chatProto by remember { mutableStateOf(ProtoPrefs.provider(ctx)) }
     var saved by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("聊天协议（模型厂商）", fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { chatProto = "openai" }, enabled = chatProto != "openai") { Text("OpenAI 兼容") }
+            OutlinedButton(onClick = { chatProto = "anthropic" }, enabled = chatProto != "anthropic") { Text("Claude") }
+            OutlinedButton(onClick = { chatProto = "gemini" }, enabled = chatProto != "gemini") { Text("Gemini") }
+        }
+        Text("选 Claude/Gemini 时，端点/模型按对应官方或中转地址填。", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
         Text(AppI18n.t("settings.theme"), fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { onThemeChange(theme.copy(mode = ThemeMode.DAY)) }, enabled = theme.mode != ThemeMode.DAY) { Text("卡其日间") }
@@ -244,6 +253,7 @@ private fun AdvancedSettings(
             CommunityPrefs.setBase(ctx, communityBase.trim())
             SysPrefs.setPersonalTag(ctx, personalTag.trim())
             HeaderHelp.apply(ctx)
+            ProtoPrefs.setProvider(ctx, chatProto); ProtoPrefs.apply(ctx)
             ImagePrefs.setBase(ctx, imgBase.trim()); ImagePrefs.setModel(ctx, imgModel.trim())
             ImagePrefs.setEditPath(ctx, imgEditPath.trim()); ImagePrefs.setApiKey(ctx, imgKey.trim())
             val vr = VisualCfg.initIfConfigured(ctx)
