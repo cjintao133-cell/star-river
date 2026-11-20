@@ -323,8 +323,13 @@ private fun DeveloperSettings(
 ) {
     var info by remember { mutableStateOf("") }
     var probe by remember { mutableStateOf("") }
+    var compliance by remember { mutableStateOf("") }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        Bg.run({ Mobilebind.compliancePolicy() }) { compliance = it }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("合规 / 系统", fontWeight = FontWeight.Bold)
+        if (compliance.isNotEmpty()) Text("内容策略：" + compliance, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onOpenPermission) { Text("权限管理") }
             OutlinedButton(onClick = onOpenReport) { Text("举报与反馈") }
