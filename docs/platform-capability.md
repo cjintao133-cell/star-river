@@ -1,14 +1,23 @@
+# Platform Capability & Content Compliance
 
-## 内容合规差异（T-M7-09，双 flavor）
+## Content-compliance flavors (dual SKU)
 
-同一代码库，两个 SKU 靠构建参数区分（不 fork），由 `-ldflags "-X star-river/kernel/compliance.currentFlavor=<flavor>"` 选择；默认 `international`。
+The same codebase produces two SKUs via a build parameter (no fork), selected by
+`-ldflags "-X star-river/kernel/compliance.currentFlavor=<flavor>"`; default `international`.
 
-| 维度 | international（海外，默认） | domestic（国内） |
+| Dimension | international (default) | domestic |
 |---|---|---|
-| 敏感过滤 | standard | strict |
-| 默认屏蔽分类 | nsfw | nsfw / violence / gambling |
-| 默认界面语言 | en | zh |
-| 举报入口 | 展示 | 展示（强制） |
-| 视觉生成 | 开 | 开 |
+| Sensitive filtering | standard | strict |
+| Default-blocked categories | nsfw | nsfw / violence / gambling |
+| Default UI language | en | zh |
+| Report entry | shown | shown (mandatory) |
+| Image generation | on | on |
 
-- 内核侧 `kernel/compliance.ContentPolicy` 暴露默认策略与 `ReportEntryVisible` 位；举报入口 UI、双 SKU 真实构建产出属界面/构建层（押后）。平台能力位：`ReportEntryVisible` 两 flavor 均为 true（合规底线）。
+- The kernel side (`kernel/compliance.ContentPolicy`) exposes the default policy and the `ReportEntryVisible` bit. The
+  report-entry UI and real dual-SKU build artifacts belong to the UI/build layer (deferred). `ReportEntryVisible` is
+  `true` for both flavors (compliance baseline).
+
+## Platform notes
+- **Android**: MCP remote protocol only; built-in tools in-process; no dynamic binary download.
+- **Windows**: stdio MCP as a separate process; DPAPI/tray behind interface abstractions, mock-tested on Linux.
+- See `architecture.md` for the package boundary table.

@@ -1,75 +1,72 @@
-# 网页搜索模块 · 设计结论（T-M 新增 / 供 kernel/search 落地）
+# Web Search Module · Design
 
-> 来源：联网调研（各家搜索 API 定价/SearXNG）+ fa5.2(claude-fable-5-2) 架构评审交叉验证。
-> 产品约束：纯本地、零上传、BYOK（用户自带密钥）、Android+Windows、国内国外通用、省成本。
+> Product constraints: local-first, zero-upload, BYOK, Android + Windows, works in and out of China, cost-conscious.
 
-## 一、验收目标（UI）
-用户搜索框输入 → 结果页显示：**标题 + 链接 + 摘要 + 缩略图**（类百度）；同时供 AI 工具调用（主脑可搜索）。
+## 1. Acceptance goal (UI)
+User types in a search box → results page shows **title + link + snippet + thumbnail** (search-engine-like); the same
+results also feed AI tool calls (the main brain can search).
 
-## 二、候选后端（调研事实）
-| 后端 | 成本 | 缩略图 | 备注 |
+## 2. Candidate backends (survey facts)
+| Backend | Cost | Thumbnail | Notes |
 |---|---|---|---|
-| **SearXNG（自托管）** | 免费 | 视引擎，不一定 | AGPL-3.0，聚合 70+ 引擎，JSON 返 title/url/snippet；用户可自建 |
-| Brave Search API | ~$5/1k | 有（含 image 字段） | 海外稳定 |
-| Exa | ~$7/1k | 有限 | 偏语义/长文检索 |
-| SerpAPI | $25 起/月 | 有（Google 内联图） | 单价高，仅需 Google 图时用 |
-| Tavily | 有免费额度 | 有限 | 偏 AI 检索 |
-| Bing Search API | — | — | **已于 2025-08 退役，不接**（改为 Azure Grounding with Bing） |
-| 国内：博查 Bocha / 智谱搜索 | 各家 | 有 | 国内直连更稳（Brave/Tavily 国内不稳） |
+| **SearXNG (self-hosted)** | Free | Varies by engine | AGPL-3.0, aggregates 70+ engines, JSON returns title/url/snippet; self-hostable |
+| Brave Search API | ~$5/1k | Yes (image field) | Stable overseas |
+| Exa | ~$7/1k | Limited | Semantic/long-form leaning |
+| SerpAPI | from $25/mo | Yes (Google inline images) | High unit price; only when Google images needed |
+| Tavily | Free tier | Limited | AI-search leaning |
+| Bing Search API | — | — | **Retired 2025-08, not integrated** |
+| China: Bocha / Zhipu search | Varies | Yes | More stable in China (Brave/Tavily unstable there) |
 
-## 三、结论
+## 3. Conclusions
 
-### 1) 适配器抽象（kernel/search）
-- **统一接口**：`Search(ctx, Query{Text, Lang, Region, Count, Recency}) → []Result`；另有 `HealthCheck()`、`Quota()`。
-- **统一结果结构**：`Result{ Title, URL, Snippet, Thumbnail(可空), Favicon(可空), PublishedAt(可空), Source }`。
-- 各适配器**声明能力**（是否带缩略图 / 支持中文 / 支持时效），供路由决策；上层不感知具体后端。
+### 1) Adapter abstraction (`kernel/search`)
+- **Unified interface**: `Search(ctx, Query{Text, Lang, Region, Count, Recency}) → []Result`; plus `HealthCheck()`, `Quota()`.
+- **Unified result**: `Result{ Title, URL, Snippet, Thumbnail?, Favicon?, PublishedAt?, Source }`.
+- Adapters **declare capabilities** (has thumbnail / supports Chinese / supports recency) for routing; upper layers are backend-agnostic.
 
-### 2) BYOK 后端组合 + 主备
-- **免费优先**：用户自建 SearXNG（首选）→ Tavily 免费额度 → Brave 付费。
-- **海外链路**：Brave 主、Tavily 备；Exa 仅语义/长文；SerpAPI 仅在要 Google 缩略图时启用。
-- **国内链路**：增补国内适配器（博查/智谱），或 SearXNG 启用百度/搜狗引擎。
-- **路由**：启动探测连通性 → 按「已填 Key、可达、有余额」自动排序 → 失败即降级。
+### 2) BYOK backend mix + failover
+- **Free first**: user self-hosted SearXNG (preferred) → Tavily free tier → Brave paid.
+- **Overseas path**: Brave primary, Tavily backup; Exa only for semantic/long-form; SerpAPI only for Google thumbnails.
+- **China path**: add domestic adapters (Bocha/Zhipu), or enable Baidu/Sogou engines in SearXNG.
+- **Routing**: probe connectivity at startup → order by "has key, reachable, has quota" → degrade on failure.
 
-### 3) 缩略图缺失处理（隐私友好）
-- 降级链：后端自带图 → 本地抓目标页 `og:image`（仅前几条、短超时、异步、不阻塞文字）→ 站点 favicon → 域名首字母色块。
-- **不用第三方 favicon 服务**（防泄露浏览行为）；提供「不加载远程图片」开关。
+### 3) Thumbnail-missing handling (privacy-friendly)
+- Degradation chain: backend image → locally fetch the target page `og:image` (first few, short timeout, async, non-blocking) → site favicon → domain first-letter color block.
+- **No third-party favicon service** (avoids leaking browsing behavior); provide a "don't load remote images" toggle.
 
-### 4) 缓存与限流（省钱核心）
-- 结果落**本地 DB 缓存**：键=规范化查询+参数；时效类 ~15min、常规 ~24h；缩略图磁盘 LRU。
-- 每后端独立**令牌桶** + 本地记账月配额 + 每日花费上限；429/超时 → 熔断+指数退避+切备用。
-- **最大省钱点**：先由模型判断"是否需要搜索" + 相似查询去重。
+### 4) Cache & rate limiting (the cost-saving core)
+- Results cached in **local DB**: key = normalized query + params; recency ~15min, general ~24h; thumbnails on-disk LRU.
+- Per-backend **token bucket** + local monthly quota accounting + daily spend cap; 429/timeout → circuit-break + exponential backoff + switch to backup.
+- **Biggest saving**: let the model decide "do I even need to search" + dedupe similar queries.
 
-### 5) AGPL 风险
-- 通过 **HTTP 调用用户自己的 SearXNG 实例不构成衍生作品**，App 不受 AGPL 传染；若**捆绑/内嵌** SearXNG 代码或分发则需评估（建议：只做客户端连接，不分发 SearXNG 本体）。
+### 5) AGPL risk
+- Calling the user's own SearXNG instance over **HTTP does not create a derivative work**, so the app isn't AGPL-tainted; bundling/embedding/distributing SearXNG code would need assessment (recommendation: client connects only, don't distribute SearXNG itself).
 
-### 6) 一句话最终架构
-> `kernel/search` 定义统一 `SearchProvider` 接口 + 多适配器（SearXNG/Brave/博查/Tavily…）可插拔，配能力声明与自动路由主备；本地缓存+令牌桶限流控成本；缩略图多级降级且隐私友好；BYOK 用户自带 Key/自建实例，默认零上传。
+### 6) One-line architecture
+> `kernel/search` defines a unified `SearchProvider` interface + pluggable adapters (SearXNG/Brave/Bocha/Tavily…), with
+> capability declarations and automatic primary/backup routing; local cache + token-bucket rate limiting control cost;
+> thumbnails degrade in multiple levels, privacy-friendly; BYOK, default zero-upload.
 
-## 四、接入热门搜索 MCP（硬要求，用户强调「记住」）
+## 4. Integrating popular search MCPs (hard requirement)
 
-搜索**不只走原生 API 适配器**，还要能接各种**热门搜索类 MCP 服务器**，与原生适配器一起参与统一检索/主备路由。
+Search should **not** only go through native API adapters; it must also integrate popular **search MCP servers**, participating
+in the unified retrieval/routing alongside native adapters.
 
-- **已核实的常见搜索 MCP**（均把「搜索」暴露成 MCP 工具）：
-  | 搜索 MCP | 认证 | 备注 |
-  |---|---|---|
-  | Tavily MCP | API key | 检索质量高、有免费额度 |
-  | Exa MCP | 无 key(免费档限流)/OAuth/key | 远程 MCP，精炼检索+抓取 |
-  | Brave MCP | API key | 传统搜索体验 |
-  | Firecrawl MCP | API key | 搜索+整站抓取/提取 |
-  | Perplexity Web MCP | Pro/Max 订阅 | 30+ 工具，含深度研究 |
-  | DuckDuckGo MCP | 免费 | 无 key、轻量 |
-  | **百度搜索 MCP** | API key | 国内首选。两类：① 第三方 baidu-search-mcp（基于文心API，支持深度搜索+时效过滤）；② 百度千帆官方实时搜索接口（query/count/freshness）。走 MCPProvider 统一接入 |
-  | Parallel AI | API key | 面向 agent |
-- **复用现有内核**：搜索 MCP 本质就是一个暴露 `search` 工具的 MCP server —— 走 `kernel/tool` 的 MCP 客户端（Streamable HTTP / stdio[Windows]）+ `kernel/tooldisc` 注册索引，**无需为每个 MCP 单独写代码**。
-- **统一抽象**：`SearchProvider` 两种实现——① Native 适配器（SearXNG/Brave/博查…直连）；② MCP 适配器（在配置好的 MCP server 上调其 search 工具，结果映射到统一 `Result`）。上层/搜索页/路由不区分二者。
-- **配置与切换**：设置里可「添加搜索 MCP 服务器」（填端点/key/工具名）→ 进 `tooldisc` 索引 → 搜索页与主备路由可选用；支持多接、排序、启用/停用。
-- **路由**：统一按「已配置、可达、有额度」在 Native 与 MCP 后端间择优、互为备份。
+- **Verified common search MCPs** (all expose "search" as an MCP tool): Tavily, Exa, Brave, Firecrawl, Perplexity Web, DuckDuckGo,
+  **Baidu search MCP** (domestic-first), Parallel AI.
+- **Reuse the kernel**: a search MCP is just an MCP server exposing a `search` tool — route through `kernel/tool`'s MCP client
+  (Streamable HTTP / stdio[Windows]) + `kernel/tooldisc` index, **no per-MCP code needed**.
+- **Unified abstraction**: `SearchProvider` has two kinds — ① Native adapter (SearXNG/Brave/Bocha… direct); ② MCP adapter (call
+  the search tool on a configured MCP server, map results to unified `Result`). Upper layers/search page/routing don't distinguish them.
+- **Config & switching**: settings let you "add a search MCP server" (endpoint/key/tool name) → into the `tooldisc` index →
+  selectable in the search page and routing; multi-attach, ordering, enable/disable.
+- **Routing**: choose/best-effort across Native and MCP backends by "configured, reachable, has quota", backing each other up.
 
-> 结论补充：搜索后端 = **原生 API 适配器 + 热门搜索 MCP 适配器** 两路统一，均可插拔、一起路由。
+> Conclusion: search backends = **native API adapters + popular search MCP adapters**, both pluggable, routed together.
 
-## 五、落地下一步（建议）
-1. `kernel/search`：`SearchProvider` 接口 + `Result` 结构 + 路由（主备/能力声明）+ 本地缓存 + 令牌桶。
-2. 先实现 **SearXNG 适配器**（免费、可自托管、便于实测）+ **Brave 适配器**（海外付费档）；国内适配器（博查）接口先留位。
-3. 测试：httptest mock 各后端 JSON（title/url/snippet/thumbnail 解析、缺图降级、429 熔断、主备切换、缓存命中）；不连真网。
+## 5. Next steps
+1. `kernel/search`: `SearchProvider` interface + `Result` + routing (primary/backup + capability declarations) + local cache + token bucket.
+2. Implement the **SearXNG adapter** first (free, self-hostable, easy to test) + **Brave adapter**; reserve domestic (Bocha) interface.
+3. Tests: httptest mock backend JSON (title/url/snippet/thumbnail parsing, missing-image degradation, 429 circuit-break, primary/backup switch, cache hit); never hit the real network.
 
-> 语音（STT/TTS）另立设计（`kernel/voice`）：适配器抽象 + 音频前处理（native）+ 可选第三方；下一轮做。
+> Voice (STT/TTS) has its own design (`kernel/voice`): adapter abstraction + audio preprocessing (native) + optional third-party; next round.

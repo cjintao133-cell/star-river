@@ -1,59 +1,62 @@
-# 生态接入（Ecosystem Ingestion）设计与红线
+# Ecosystem Ingestion · Design & Red Lines
 
-> 状态：v1，2026-11-20。回答一个高频需求："我能不能吃下别的开源框架的插件生态，把它们的插件变成我能用的 MCP 工具？"
-> 结论先行：**能吃的只有 MCP 原生 + 数据格式；框架私有插件做不到"自动转换"，只能写兼容层或重写，且大多只能在桌面/服务器侧跑。**
+> Status: v1, 2026-11-20. Answers a frequent request: "Can I ingest another open-source framework's plugin ecosystem and
+> turn its plugins into MCP tools I can use?"
+> Bottom line up front: **you can only ingest MCP-native capabilities + data formats; a framework's private plugins cannot be
+> "auto-converted" — you can only write a compatibility layer or rewrite, and most only run on desktop/server.**
 
-## 0. 一句话原则
+## 0. One-line principle
 
-**以 MCP 为边界吃生态。** 插件一律外部进程、可选、可关、可沙盒隔离；绝不为"吃插件"在设备端引入第二运行时（Python/Node），绝不吞会传染的许可证代码。
+**Ingest the ecosystem via the MCP boundary.** Plugins are always external processes — optional, disableable, sandbox-isolated.
+Never bring a second runtime (Python/Node) onto the device to "eat plugins"; never swallow license-infectious code.
 
-## 1. 两个别搞混的东西：插件 ≠ MCP 工具
+## 1. Two things not to confuse: plugins ≠ MCP tools
 
-- **框架的"插件"**：写死在该框架内部 API 上的代码（Python/JS），勾住宿主的消息管线、数据库、甚至 DOM。**不是能独立跑的东西。**
-- **MCP 工具**：进程间 JSON-RPC 暴露的能力，任何 MCP 客户端都能调。**是另一层。**
+- **A framework's "plugin"**: code bound to that framework's internal API (Python/JS), hooking the host's message pipeline, DB, even DOM. **Not a standalone runnable thing.**
+- **An MCP tool**: a capability exposed over inter-process JSON-RPC, callable by any MCP client. **A different layer.**
 
-两者不在同一层。**不存在**能把"框架私有插件"自动变 MCP 的万能转换器。
+The two are not the same layer. There is **no** universal converter that turns "framework-private plugins" into MCP.
 
-事实核对（2026-11 联网核实）：
-- AstrBot v3.5.0 起原生支持 MCP（挂 MCP server 用其工具），但其 **1000+ 插件是 Python 扩展**，非 MCP。
-- SillyTavern 靠社区扩展可当 MCP 客户端（SillyTavern-MCP-Client / MCP-Servers-Universal），但其扩展是 JS。
+Fact check (2026-11): AstrBot v3.5.0+ natively supports MCP, but its **1000+ plugins are Python extensions**, not MCP.
+SillyTavern can act as an MCP client via community extensions, but those extensions are JS.
 
-## 2. 四层接入（按"能不能 / 多安全"分级）
+## 2. Four ingestion levels (graded by "can / how safe")
 
-### ① MCP 原生 → 今天就能吃，零代码（主力路径）
-任何人以 MCP server 形式发布的能力（Tavily/Exa/Firecrawl/文件系统/浏览器/数据库/**百度搜索 MCP**…），直接挂 `kernel/tool`（MCP host）。已有 2000 工具按需发现 + 热插拔，现成。
-- 传输：Streamable HTTP / SSE / stdio（stdio 仅桌面/Windows）。
-- **设备端零额外运行时**，天然满足红线。
+### ① MCP-native → usable today, zero code (main path)
+Any capability published as an MCP server (Tavily/Exa/Firecrawl/filesystem/browser/database/**Baidu search MCP**…) plugs
+straight into `kernel/tool` (the MCP host). Two-stage on-demand discovery for thousands of tools + hot-plug is already there.
+- Transport: Streamable HTTP / SSE / stdio (stdio desktop/Windows only).
+- **Zero extra runtime on device** — naturally satisfies the red line.
 
-### ② 数据 / 格式导入 → 已能做，安全
-角色卡 V2、世界书、预设、主题包——**数据不是代码**。SillyTavern 的卡/世界书可直接导入。
-- 只从用户选定的**本地文件**读取；远程头像引用用占位图，**不发请求**（纯本地约束）。
+### ② Data / format import → doable now, safe
+Character-card V2, world books, presets, theme packs — **data, not code**. SillyTavern cards/world books import directly.
+- Read only from **user-selected local files**; remote avatar references use a placeholder, **no request made** (local-only constraint).
 
-### ③ 兼容 MCP 服务器 → 能做，但要逐框架写 shim，成本大
-针对 AstrBot(Python 插件) / SillyTavern(JS 扩展) 这类宿主内部插件：写**独立进程**的"兼容服务器"，加载那框架的插件、转成 MCP 工具。
-代价（务必知情）：
-- 要拖该框架的运行时（Python/Node）→ **违背"设备端纯 Go+C"红线**，只能桌面/服务器侧；
-- 插件常勾宿主内部（消息流/DB/DOM），**拆出来未必跑得起来**；
-- 跑任意第三方代码 → 安全/沙盒压力拉满。
-**只按"值得的少数插件"逐个做，不做通用通吃，绝不进安卓内核。**
+### ③ Compatible MCP server → doable, but a per-framework shim, high cost
+For host-internal plugins like AstrBot (Python) / SillyTavern (JS extensions): write a **separate-process** "compatibility server"
+that loads that framework's plugins and exposes them as MCP tools.
+Costs (be aware):
+- Must drag that framework's runtime (Python/Node) → **violates the "device-side pure Go+C" red line**; desktop/server-side only.
+- Plugins often hook host internals (message flow/DB/DOM); **may not run once extracted.**
+- Running arbitrary third-party code → security/sandbox pressure maxed.
+**Do it only for "the worthwhile few" plugins, case by case; never a universal ingest; never into the Android kernel.**
 
-### ④ 源码移植 → 不自动，人工重写
-真要对齐某个能力，老实重写最稳，费人而已。
+### ④ Source port → not automatic, manual rewrite
+To truly match a capability, an honest rewrite is most reliable — just costs people.
 
-## 3. 反向才是护城河：让自己的能力变成 MCP server
+## 3. The moat is the reverse direction: expose your capabilities as MCP servers
+Export character/memory/emotion/proactivity/vision **as MCP servers**, so SillyTavern / AstrBot / Claude Desktop and other
+MCP clients can call **our** sample characters and memory engine. **Being a standard provider is worth far more than being an
+ecosystem vacuum cleaner.**
 
-把角色/记忆/情绪/主动/视觉**导出成 MCP server**，于是 SillyTavern / AstrBot / Claude Desktop 等 MCP 客户端都能调用**我们的**示例角色、记忆引擎。
-**当标准提供方，比当生态吸尘器值钱得多。**
+## 4. Red lines (crossing = violation)
+1. **No second runtime on device**: don't stuff Python/Node into the Android kernel.
+2. **Arbitrary third-party code must be external process + sandbox-isolated + optional/disableable.**
+3. **License infection**: GPL/AGPL — client connection only, never swallow the code (same as the SearXNG principle).
+4. **Local-first**: imports never auto-fetch remote resources; avatar references use placeholders.
+5. **Keys never in URLs/logs**: MCP server keys are entered in settings and stored encrypted.
+6. **Don't break layering**: the core (incl. `kernel/tool` MCP host) imports no specific framework/plugin adapter code; compatibility layers live in the app-assembly layer or a separate process.
 
-## 4. 红线（吃到即违规的线）
-
-1. **不引入第二运行时到设备端**：不把 Python/Node 塞进安卓内核。
-2. **任意第三方代码必须外部进程 + 沙盒隔离 + 可选可关**（见"系统·安全·自愈"板块的沙盒策略）。
-3. **许可证传染**：GPL/AGPL 只做客户端连接、不吞代码（同 SearXNG 原则）。
-4. **纯本地**：导入不自动拉远程资源，头像引用用占位图。
-5. **密钥不进 URL/日志**：MCP server 的 key 在设置里填、加密存。
-6. **红线2 不破**：底座（含 kernel/tool MCP host）不 import 任何具体框架/插件的适配代码；兼容层在应用装配层或独立进程。
-
-## 5. 落地位置（UI）
-
-社区页 → MCP 集市 → **生态接入**分区，三档可视化：MCP 原生 / 兼容服务器 / 格式导入。让用户清楚"我支持什么、不支持什么"，杜绝"万能转换"幻想。
+## 5. Where it lives (UI)
+Community page → MCP marketplace → **Ecosystem ingestion** section, three tiers visualized: MCP-native / compatible server /
+format import. Make it clear "what I support and don't", killing the "universal converter" fantasy.

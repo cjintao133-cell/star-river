@@ -1,46 +1,50 @@
-# 隐私边界说明（零数据上传承诺）
+# Privacy Boundary (no-upload commitment)
 
-Star River 的承诺：**默认零数据上传，密钥只在你手里**。本文件列出「本地存什么」「什么情况下数据会离开设备」「崩溃 dump 怎么处理」，作为产品行为的边界说明书。
+Star River's promise: **no upload by default, keys stay in your hands.** This document lists *what is stored locally*,
+*when data leaves the device*, and *how crash dumps are handled* — a behavioral boundary spec.
 
-## 一、本地存什么（全部在你自己的设备上）
+## 1. What is stored locally (all on your own device)
 
-| 数据 | 位置 | 是否加密 |
+| Data | Location | Encrypted |
 |---|---|---|
-| 会话与消息 | 本地 SQLite（`sessions` / `messages` 表） | 消息正文 `content_cipher` 用 AES-GCM 字段加密（密钥在你本地 Keystore/DPAPI） |
-| 长期记忆、向量索引 | 本地（引擎内存 / 后续落库） | 随存储基座策略 |
-| 情绪状态、主动调度状态 | 本地快照 | — |
-| 模型本地统计（成功率/延迟/token） | 本地 SQLite（`model_stats`） | — |
-| API 密钥（BYOK） | 本地密钥库（Android Keystore / Windows DPAPI） | 由系统密钥库保护；备份时经用户密码派生密钥加密 |
-| 应用配置 | 本地（`app_meta`） | — |
+| Sessions & messages | Local SQLite (`sessions` / `messages`) | Message body `content_cipher` uses AES-GCM field encryption (key in local Keystore/DPAPI) |
+| Long-term memory, vector index | Local (engine memory / later persisted) | Per storage-base policy |
+| Emotion state, proactivity state | Local snapshots | — |
+| Local model stats (success/latency/token) | Local SQLite (`model_stats`) | — |
+| API keys (BYOK) | Local secret vault (Android Keystore / Windows DPAPI) | Protected by the OS keystore; backup encrypted with a user-password-derived key |
+| App config | Local (`app_meta`) | — |
 
-上述数据**不上传到 Star River 自有服务器**（本项目没有自有后端收集用户数据）。
+The above is **not uploaded to any server of ours** (the project has no own backend collecting user data).
 
-## 二、什么情况下数据会离开设备
+## 2. When data leaves the device
 
-数据仅在**你主动发起**、且**目的地是你自己配置的端点**时才出设备：
+Data leaves only when **you initiate it** and the **destination is an endpoint you configured**:
 
-1. **你配置的模型端点**（BYOK）：对话时把上下文发送到**你填写的 API 地址**（官方或你信任的中转）。密钥只经请求头携带，不写入 URL/日志。
-2. **你配置的 MCP / 图像服务**：工具调用、图像生成把请求发送到**你配置的服务器**。
-3. **更新/主题/角色卡下载（CDN）**：仅在你触发下载时，从配置的 CDN 拉取文件；不上报任何用户内容。
-4. **崩溃 dump（默认不发）**：见第三节，默认只存本地。
+1. **Your model endpoint** (BYOK): on chat, the context is sent to **the API address you entered** (official or a gateway you trust). The key travels only in the request header, never in URLs/logs.
+2. **Your MCP / image service**: tool calls and image generation send requests to **the server you configured**.
+3. **Update/theme/character-card download (CDN)**: only when you trigger a download, files are fetched from the configured CDN; no user content is reported.
+4. **Crash dump (off by default)**: see section 3; stored locally by default.
 
-除此之外，网关/适配层不会自行向任何第三方回传你的数据。判定标准：**端点地址由你填写；你不填或不触发，数据就不出设备。**
+Beyond this, the gateway/adapter layer does not send your data to any third party on its own. Criterion: **the endpoint
+address is entered by you; if you don't enter it or don't trigger it, data doesn't leave the device.**
 
-## 三、崩溃 dump 的处理（默认仅本地，不自动上传）
+## 3. Crash dumps (local only by default, never auto-uploaded)
 
-- 崩溃时**只**在本地写一份 dump 文件（目录权限 `0700`、文件 `0600`），内容为崩溃信息 + 堆栈 + Go 版本/OS/架构，**不做任何网络上报**（诊断包不含网络能力，无法上传）。
-- 是否把 dump 发给开发者排查，**完全由你手动决定**：在设置页「关于/诊断」找到本地 dump 文件，自行决定是否贴到 issue。
-- 断网环境下崩溃：dump 仍能正常落本地（不依赖网络）。
+- On crash, a dump file is written **only** locally (dir `0700`, file `0600`) with crash info + stack + Go version/OS/arch;
+  **no network reporting** (the diag package has no network capability, so it cannot upload).
+- Whether to send the dump to a developer is **entirely your manual choice**: find the local dump under Settings → About/Diagnostics and decide whether to paste it into an issue.
+- Offline crashes: the dump still lands locally (no network dependency).
 
-## 四、你可以带走的
+## 4. What you can take with you
 
-- 数据导出：本地打包会话/消息/统计/配置为归档文件，可自行保存或迁移（见数据导出功能）。
-- 密钥备份：用你自设的密码加密备份，换机时用同一密码恢复；密码不落盘，忘记无法恢复。
+- **Data export**: package sessions/messages/stats/config into an archive for backup or migration.
+- **Key backup**: encrypted with a password you set; restore on a new device with the same password. The password is never
+  stored; if forgotten, it cannot be recovered.
 
-## 五、边界之外（明确不做）
+## 5. Outside the boundary (explicitly not done)
 
-- 不收集遥测/埋点上报云端。
-- 不在你不知情时上传任何内容。
-- 不把密钥写入日志、URL 或崩溃 dump。
+- No telemetry/analytics to the cloud.
+- No upload of any content without your knowledge.
+- No keys written into logs, URLs, or crash dumps.
 
-> 本文与 `kernel/diag` 内嵌副本一致；应用内可从「设置 → 关于 → 隐私边界」查看。
+> This matches the copy embedded in `kernel/diag`; viewable in-app at Settings → About → Privacy Boundary.

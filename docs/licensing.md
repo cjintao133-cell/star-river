@@ -1,23 +1,24 @@
-# 许可
+# License
 
-## 总则
-- **本仓库整体采用 [Apache License 2.0](../LICENSE)。** 包括全部 `kernel/*` 包、
-  `native/`、`cmd/`、`scripts/`、`.github/`、以及记忆/情绪/主动等「能力插件包」
-  （`kernel/hippocampus`、`kernel/endocrine`、`kernel/proactive`）。
-- 无「闭源区」。历史上曾设想的"三包闭源"方案**已废弃**，改为全开源。
-- Apache-2.0 含专利授权、商标条款与保留声明，生态友好、企业可采用。
+## In short
+- **The whole repository is under [Apache License 2.0](../LICENSE).** This includes every `kernel/*` package,
+  `native/`, `cmd/`, `scripts/`, `.github/`, and the memory/emotion/proactivity "capability plugins"
+  (`kernel/hippocampus`, `kernel/endocrine`, `kernel/proactive`).
+- There is **no "closed-source area"**. The earlier "three-package closed" plan is **abandoned**; everything is open.
+- Apache-2.0 includes a patent grant, trademark clause, and attribution requirements — ecosystem-friendly and
+  adoptable by enterprises.
 
-## 为什么全开源
-- 记忆曲线、情绪维度、向量召回等均为公开常识，闭源无实际壁垒，反而阻碍采用与贡献。
-- 框架的价值在"被采用、被信任、可持续维护"，不在"藏一段代码"。
+## Why fully open source
+- Forgetting curves, emotion dimensions, vector recall, etc. are public knowledge; keeping them closed gives no real
+  moat and only discourages adoption and contribution.
+- A framework's value is in being **adopted, trusted, and sustainably maintained**, not in hiding a snippet of code.
 
-## 分层约束（工程规矩，非许可证）
-虽然全部开源，仍**保留依赖方向约束**（源码整洁 + 可拔插）：
-- **底座包（`kernel/bus`、`kernel/adapter`、`kernel/store`、`kernel/orchestrator`、
-  `kernel/tool`、`kernel/core/*` 等）不得 import 能力插件包**
-  （`hippocampus` / `endocrine` / `proactive`）。
-- 能力插件包可以 import 底座。
-- 该约束由 `scripts/check-open-split.sh` 持续校验（底座可单独编译、且不依赖插件包）。
+## Layering constraint (engineering rule, not licensing)
+Although fully open, we **keep the dependency-direction constraint** (clean source + pluggability):
+- **Core packages (`kernel/bus`, `kernel/adapter`, `kernel/store`, `kernel/orchestrator`, `kernel/tool`,
+  `kernel/core/*`, etc.) must not import capability-plugin packages** (`hippocampus` / `endocrine` / `proactive`).
+- Capability plugins may import the core.
+- Enforced continuously by `scripts/check-open-split.sh` (the core compiles standalone and doesn't depend on plugins).
 
-## 贡献即同意
-按 Apache-2.0，贡献默认以同一许可授权（inbound = outbound）。
+## Contributions
+Under Apache-2.0, contributions are licensed under the same terms by default (inbound = outbound).
