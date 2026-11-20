@@ -1,4 +1,4 @@
-// Package cards 角色卡导入（T-M3-04，伴侣插件能力，底座不 import）。
+// Package cards 角色卡导入（T-M3-04，能力插件能力，底座不 import）。
 //
 // 支持四载体（A1 已批）：V2/V3 JSON、chara PNG（tEXt/iTXt base64）、charx（zip）。
 // 世界书条目转「带触发词的记忆条目」（A2：constant 常驻 / selective 触发词匹配 +

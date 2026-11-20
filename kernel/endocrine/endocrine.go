@@ -1,4 +1,4 @@
-// Package endocrine 是情绪引擎（伴侣插件包，T-M4-01 五维状态机）。
+// Package endocrine 是情绪引擎（能力插件包，T-M4-01 五维状态机）。
 //
 // 依赖方向（红线 2）：底座不得 import 本包；本包可 import 底座开源包（core/clock）。
 //
@@ -149,7 +149,7 @@ func DominanceDimension() Dimension {
 }
 
 // DefaultRegistry 五维默认注册表（PRD T-M4-01 起步档）。
-// 衰减率设定贴合伴侣直觉：情绪(效价/唤醒)平复较快，疲劳恢复中，好奇回升中，亲密最慢（近似长期记忆）。
+// 衰减率设定贴合助手直觉：情绪(效价/唤醒)平复较快，疲劳恢复中，好奇回升中，亲密最慢（近似长期记忆）。
 func DefaultRegistry() *Registry {
 	r := NewRegistry()
 	_ = r.Register(Dimension{Key: KeyValence, Label: "效价", Min: -1, Max: 1, Baseline: 0, DecayPerDay: 0.5})

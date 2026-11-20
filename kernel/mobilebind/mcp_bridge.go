@@ -2,7 +2,7 @@ package mobilebind
 
 // MCP 热插拔桥（T-M6-01 交 UI）：把 kernel/tool.Manager 暴露给 UI。
 // 插件"单独启用/停用"= 运行时热插拔（Add/Remove/SetEnabled），**不重启进程**即生效。
-// 红线：只 import 开源底座 kernel/tool，不 import 伴侣插件。
+// 红线：只 import 开源底座 kernel/tool，不 import 能力插件。
 // 平台：安卓仅 HTTP/SSE 端点可连（stdio 子进程仅桌面/Windows，见 platform-capability）。
 
 import (

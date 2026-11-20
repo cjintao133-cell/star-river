@@ -1,7 +1,7 @@
 // Package tool 是工具运行时（T-M6-01 远程 MCP 客户端）。
 //
 // 依赖方向：本包为内核底座的一部分（开源，MCP 为开放协议），只依赖标准库；
-// 不 import 任何伴侣插件包（hippocampus/endocrine/proactive）。
+// 不 import 任何能力插件包（hippocampus/endocrine/proactive）。
 //
 // MCP（Model Context Protocol）用 JSON-RPC 2.0 编码，本包实现 **Streamable HTTP**
 // 传输（协议版本 2025-06-18，向后兼容尝试）：

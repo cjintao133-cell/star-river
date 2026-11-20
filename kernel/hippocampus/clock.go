@@ -1,4 +1,4 @@
-// Package hippocampus 是记忆引擎（伴侣插件包，T-M3-02 遗忘曲线）。
+// Package hippocampus 是记忆引擎（能力插件包，T-M3-02 遗忘曲线）。
 //
 // 依赖方向（红线 2）：底座不得 import 本包；本包可 import 底座开源包（core/types、core/clock、native/vector）。
 //

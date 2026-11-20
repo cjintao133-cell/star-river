@@ -1,6 +1,6 @@
 package mobilebind
 
-// 应用装配（composition root）：把伴侣插件 hippocampus(记忆) / endocrine(情绪) 接进 App。
+// 应用装配（composition root）：把能力插件 hippocampus(记忆) / endocrine(情绪) 接进 App。
 // 边界：只有入口层 mobilebind 可 import 插件（红线2 只约束开源区 core/adapter/tool/orchestrator…）。
 // 职责：真实记忆编码/召回、情绪状态演化、把情绪+记忆注入聊天 system、为开发者三面板供真数据。
 

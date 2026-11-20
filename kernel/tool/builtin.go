@@ -14,7 +14,7 @@ import (
 // 内置高频工具三件：memory_query（查自身记忆）、mood_report（情绪自述）、visual_request（发起生成）。
 // 它们运行在进程内（区别于远程/stdio MCP），供"主脑"按需调用。
 //
-// 红线 2（依赖方向）：本包（tool）为内核底座的一部分，**不得 import 伴侣插件包**
+// 红线 2（依赖方向）：本包（tool）为内核底座的一部分，**不得 import 能力插件包**
 // （hippocampus/endocrine/visual）。因此记忆/情绪/视觉能力一律以**接口注入**方式接入，
 // 由应用装配层用各插件包实现这些接口后注入；tool 只认中性类型。
 

@@ -1,7 +1,7 @@
 // Package clock 内核统一可注入时钟（T-M3-06）。
 //
 // 依赖方向（红线2）：本包为内核底座，任何模块（含 hippocampus/proactive/endocrine
-// 三个伴侣插件包）都可 import；本包不 import 业务包。全系统时间源经此注入，
+// 三个能力插件包）都可 import；本包不 import 业务包。全系统时间源经此注入，
 // 使衰减/情绪/调度等时间相关逻辑可被假时钟确定性测试（月测/年测）。
 package clock
 

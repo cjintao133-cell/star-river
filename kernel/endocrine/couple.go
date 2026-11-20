@@ -41,7 +41,7 @@ func NewCoupler(reg *Registry, rules []Rule, base StyleParams) *Coupler {
 	return &Coupler{reg: reg, rules: append([]Rule(nil), rules...), base: base}
 }
 
-// DefaultRules 默认耦合规则（贴合伴侣直觉）。
+// DefaultRules 默认耦合规则（贴合助手直觉）。
 func DefaultRules() []Rule {
 	return []Rule{
 		// 效价（基0）：越高越热情、越放松、越不端着。

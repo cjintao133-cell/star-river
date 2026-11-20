@@ -11,7 +11,7 @@
 //  4. 检索 v1：工具名/短描述/分类关键词 + 分类过滤（SQLite 内建 LIKE，零新依赖）；语义检索后续可选增强。
 //
 // 依赖方向（红线 2）：本包只 import 标准库、kernel/store（SQLite 底座）、kernel/tool（Tool 类型 + 内置工具接口）。
-// **不 import 任何伴侣伴侣插件包**（hippocampus/endocrine/proactive）。
+// **不 import 任何能力插件包**（hippocampus/endocrine/proactive）。
 package tooldisc
 
 import (

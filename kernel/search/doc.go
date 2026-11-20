@@ -8,5 +8,5 @@
 // 设计见 docs/search-design.md。产品约束：纯本地、零上传、BYOK、国内外通用、省成本
 // （缓存 + 令牌桶 + 「先判断是否需要搜索」在应用层）。
 //
-// 依赖方向（红线 2）：本包为内核底座，只 import 标准库与 kernel/tool（开源）；不 import 任何伴侣插件包。
+// 依赖方向（红线 2）：本包为内核底座，只 import 标准库与 kernel/tool（开源）；不 import 任何能力插件包。
 package search

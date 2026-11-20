@@ -1,4 +1,4 @@
-// Package proactive 是主动能力调度器（伴侣插件包，T-M5-01）。
+// Package proactive 是主动能力调度器（能力插件包，T-M5-01）。
 //
 // 依赖方向（红线 2）：底座不得 import 本包；本包可 import 底座开源包（core/clock）。
 // 本包**不 import 其他插件包**（hippocampus/endocrine）：记忆到期条目与情绪状态由
