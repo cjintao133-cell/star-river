@@ -34,7 +34,7 @@
 
 ## 依赖清单（红线 1：未列者不得引入）
 - 标准库优先。
-- modernc.org/sqlite：纯 Go SQLite 驱动，三平台交叉编译零 cgo（批准优化#3；T-M2-01 前正式 go get 入账本行）。
+- modernc.org/sqlite：纯 Go SQLite 驱动，三平台交叉编译零 cgo（批准优化#3；T-M2-01 已入账 v1.23.1）。
 - golang.org/x/mobile（gomobile）：构建链工具，已装。
 - 工具链：staticcheck、garble（构建期，不进产物依赖）。
 - hnswlib：缓行，真机基准不达标再议，届时须单独批准（批准优化#2）。

@@ -1,0 +1,111 @@
+package store
+
+import (
+	"database/sql"
+	"fmt"
+	"time"
+)
+
+// migration 一条版本迁移。stmts 在该版本事务内顺序执行。
+type migration struct {
+	version int
+	name    string
+	stmts   []string
+}
+
+// migrations 迁移注册表，按 version 升序。新增表/列时追加，勿改历史条目。
+// v1：app_meta（应用元数据 KV），T-M2-01 基座验证用；后续 M2/M3 追加 sessions/messages 等。
+var migrations = []migration{
+	{
+		version: 1,
+		name:    "app_meta",
+		stmts: []string{
+			`CREATE TABLE app_meta (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )`,
+		},
+	},
+}
+
+// migrate 执行迁移框架：bootstrap 版本表 → 读已应用集合 → 按序在事务内应用未应用者。
+func (s *Store) migrate() error {
+	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+        version    INTEGER PRIMARY KEY,
+        name       TEXT NOT NULL,
+        applied_at INTEGER NOT NULL
+    )`); err != nil {
+		return fmt.Errorf("store: bootstrap schema_migrations: %w", err)
+	}
+
+	applied := map[int]bool{}
+	rows, err := s.db.Query(`SELECT version FROM schema_migrations`)
+	if err != nil {
+		return fmt.Errorf("store: read schema_migrations: %w", err)
+	}
+	for rows.Next() {
+		var v int
+		if err := rows.Scan(&v); err != nil {
+			rows.Close()
+			return err
+		}
+		applied[v] = true
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+
+	for _, m := range migrations {
+		if applied[m.version] {
+			continue
+		}
+		if err := s.applyOne(m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// applyOne 在单事务内应用一条迁移：执行全部 stmts + 记录版本。
+func (s *Store) applyOne(m migration) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, stmt := range m.stmts {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("store: migration v%d(%s): %w", m.version, m.name, err)
+		}
+	}
+	if _, err := tx.Exec(`INSERT INTO schema_migrations(version,name,applied_at) VALUES(?,?,?)`,
+		m.version, m.name, time.Now().UnixMilli()); err != nil {
+		return fmt.Errorf("store: record migration v%d: %w", m.version, err)
+	}
+	return tx.Commit()
+}
+
+// SchemaVersion 返回当前已应用的最大迁移版本（无则 0）。
+func (s *Store) SchemaVersion() (int, error) {
+	var v sql.NullInt64
+	if err := s.db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&v); err != nil {
+		return 0, err
+	}
+	if !v.Valid {
+		return 0, nil
+	}
+	return int(v.Int64), nil
+}
+
+// LatestVersion 返回注册表里最高版本（迁移目标）。
+func LatestVersion() int {
+	max := 0
+	for _, m := range migrations {
+		if m.version > max {
+			max = m.version
+		}
+	}
+	return max
+}
