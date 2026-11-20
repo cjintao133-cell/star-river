@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # 桌面 JNI 全链路无头冒烟（T-M5-03）。构建 c-shared .so → 编译 KernelBridge+smoke → 运行断言。
 set -euo pipefail
+
+# UI 已移出主树时跳过（桌面 UI 门禁依赖 ui-desktop）。
+if [ ! -d "$(cd "$(dirname "$0")/.." && pwd)/ui-desktop" ]; then echo "SKIP: ui-desktop 不在主树（UI 已移出），跳过桌面 JNI 门禁"; exit 0; fi
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/build/desktop"; mkdir -p "$OUT"
 echo "[1/3] build libstarriver.so"
