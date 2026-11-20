@@ -32,6 +32,10 @@ var (
 	ErrC      = errors.New("vector: native call failed")
 )
 
+// maxDim 与 native/vector/vector.c 的 SR_VEC_MAX_DIM 一致：int8 点积用 int32 累加，
+// 全范围乘积 16384，安全维度上限 2^31/16384 = 131071；超过即拒绝，避免有符号溢出。
+const maxDim = 131071
+
 // vecOwner 共享所有权状态：锁/句柄/关闭标记/finalizer 全集中于此。
 // Index 只持一个 *vecOwner 指针；按值复制 Index 只复制指针 → 单一 owner，杜绝双句柄双释放
 // （修复 astra 评审 P0：vector Index 按值复制导致两份锁/closed 指向同一 C 指针）。
@@ -49,7 +53,7 @@ type Index struct {
 
 // NewIndex 建索引（dim>0）。
 func NewIndex(dim int) (*Index, error) {
-	if dim <= 0 || dim > math.MaxInt32 {
+	if dim <= 0 || dim > maxDim {
 		return nil, ErrBadDim
 	}
 	p := C.sr_vec_index_create(C.int(dim))
@@ -191,11 +195,20 @@ func (ix *Index) Serialize() ([]byte, error) {
 
 // Deserialize 从字节重建索引（重启加载用）。
 func Deserialize(data []byte) (*Index, error) {
-	if len(data) < 8 {
+	if len(data) < 12 || string(data[0:4]) != "SRV1" {
+		return nil, ErrC // 头部至少 12 字节且 magic 正确，否则不交给 C
+	}
+	dim := dimFromSerialized(data)
+	if dim <= 0 || dim > maxDim {
+		return nil, ErrC // 头部维度非法/过大，拒绝整块数据交给 C
+	}
+	count := countFromSerialized(data)
+	if count < 0 {
 		return nil, ErrC
 	}
-	if d := dimFromSerialized(data); d <= 0 || d > math.MaxInt32 {
-		return nil, ErrC // 头部维度非法，拒绝整块数据交给 C
+	// 先按头部声明校验帧长（per=16+dim），不足则拒绝，避免 C 侧再分配/越界。
+	if per := 16 + dim; per > 0 && count > (len(data)-12)/per {
+		return nil, ErrC
 	}
 	cb := C.CBytes(data)
 	defer C.free(cb)
@@ -203,7 +216,7 @@ func Deserialize(data []byte) (*Index, error) {
 	if p == nil {
 		return nil, ErrC
 	}
-	o := &vecOwner{p: p, dim: dimFromSerialized(data)}
+	o := &vecOwner{p: p, dim: dim}
 	runtime.SetFinalizer(o, (*vecOwner).finalize)
 	return &Index{o: o}, nil
 }
@@ -214,6 +227,14 @@ func dimFromSerialized(data []byte) int {
 		return 0
 	}
 	return int(int32(uint32(data[4]) | uint32(data[5])<<8 | uint32(data[6])<<16 | uint32(data[7])<<24))
+}
+
+// countFromSerialized 解析头部条数（offset 8，i32le）。
+func countFromSerialized(data []byte) int {
+	if len(data) < 12 {
+		return 0
+	}
+	return int(int32(uint32(data[8]) | uint32(data[9])<<8 | uint32(data[10])<<16 | uint32(data[11])<<24))
 }
 
 // int8ToBytes 按位复制 int8→byte（不改数值）。

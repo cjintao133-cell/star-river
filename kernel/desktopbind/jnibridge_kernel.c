@@ -115,8 +115,9 @@ Java_com_starriver_desktop_KernelBridge_nInitKernel(JNIEnv* env, jclass cls, jby
     (void)cls;
     int sd = JB_OK, sk = JB_OK;
     char* cdb = jb2c(env, db, &sd);
+    if (sd == JB_EXC) return finish_err(env, 1, cdb, NULL, NULL, NULL, NULL);
     char* ckey = jb2c(env, key, &sk);
-    if ((*env)->ExceptionCheck(env) || sd == JB_EXC || sk == JB_EXC) {
+    if (sk == JB_EXC || (*env)->ExceptionCheck(env)) {
         return finish_err(env, 1, cdb, ckey, NULL, NULL, NULL);
     }
     if (sd != JB_OK || sk != JB_OK || cdb == NULL || ckey == NULL) {

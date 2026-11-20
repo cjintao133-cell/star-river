@@ -8,6 +8,15 @@
 #include <arm_neon.h>
 #endif
 
+/* 仅支持 64 位 size_t（设备目标 arm64/amd64）。32 位容量计算会 size_t 回绕，
+ * 编译期直接拒绝，避免把"靠构建惯例排除 32 位"留成隐患（astra 终扫条件性 P0）。 */
+#if !defined(SIZE_MAX) || SIZE_MAX < 0xFFFFFFFFFFFFFFFFULL
+#error "vector.c: requires 64-bit size_t (arm64/amd64 only)"
+#endif
+
+/* int8 点积用 int32 累加：全范围乘积 128*128=16384，安全维度上限 2^31/16384 = 131071。 */
+#define SR_VEC_MAX_DIM 131071
+
 /* ---- 点积内核（int8 × int8 → int32 累加） ---- */
 
 #if !defined(__ARM_NEON)
@@ -91,7 +100,7 @@ static int ensure_cap(SrVecIndex *idx, int need) {
 }
 
 SrVecIndex *sr_vec_index_create(int dim) {
-    if (dim <= 0) return NULL;
+    if (dim <= 0 || dim > SR_VEC_MAX_DIM) return NULL;
     SrVecIndex *idx = (SrVecIndex *)calloc(1, sizeof(SrVecIndex));
     if (!idx) return NULL;
     idx->dim = dim;
@@ -217,7 +226,7 @@ SrVecIndex *sr_vec_index_deserialize(const uint8_t *buf, size_t len) {
     if (memcmp(buf, "SRV1", 4) != 0) return NULL;
     int dim = get_i32(buf + 4);
     int count = get_i32(buf + 8);
-    if (dim <= 0 || count < 0) return NULL;
+    if (dim <= 0 || dim > SR_VEC_MAX_DIM || count < 0) return NULL;
     size_t per = 8 + 8 + (size_t)dim;
     if (len < 12 + (size_t)count * per) return NULL;
     SrVecIndex *idx = sr_vec_index_create(dim);
