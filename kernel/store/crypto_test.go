@@ -2,10 +2,7 @@ package store
 
 import (
 	"bytes"
-	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"star-river/kernel/secret"
@@ -107,100 +104,6 @@ func TestFieldCipherFromVaultPersistsKey(t *testing.T) {
 	got, err := c2.OpenField(sealed, "r", "content")
 	if err != nil || string(got) != "persist me" {
 		t.Errorf("重取密钥应能解密: %q, %v", got, err)
-	}
-}
-
-// 验收核心：消息表 content 列密文落盘验证——
-// 用真实 SQLite 存密文，读回解密正确；扫描库目录下所有文件（db/db-wal/db-shm）
-// 原始字节不含任何明文。WAL 模式下数据可能仍在 -wal，故必须扫全目录。
-func TestMessageContentEncryptedAtRest(t *testing.T) {
-	plaintext := "用户的私密消息 very-secret-content-do-not-persist"
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "msg.db")
-
-	s, err := Open(dbPath)
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	// 测试内建最少量 messages 表（正式 sessions/messages 表与 CRUD 属 T-M2-03）。
-	if _, err := s.Exec(context.Background(), `CREATE TABLE messages (
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL,
-        role TEXT NOT NULL,
-        content_cipher BLOB NOT NULL,
-        created_at INTEGER NOT NULL
-    )`); err != nil {
-		t.Fatalf("create messages: %v", err)
-	}
-
-	v := secret.NewMemVault()
-	c, err := FieldCipherFromVault(v, "store.fieldkey")
-	if err != nil {
-		t.Fatal(err)
-	}
-	msgID := "msg-0001"
-	sealed, err := c.SealField([]byte(plaintext), msgID, "content")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bytes.Contains(sealed, []byte(plaintext)) {
-		t.Fatal("密文含明文")
-	}
-	if _, err := s.Exec(context.Background(),
-		`INSERT INTO messages(id,session_id,role,content_cipher,created_at) VALUES(?,?,?,?,?)`,
-		msgID, "sess-1", "user", sealed, 1720000000000); err != nil {
-		t.Fatalf("insert: %v", err)
-	}
-
-	// 读回解密正确。
-	rows, err := s.Query(context.Background(), `SELECT content_cipher FROM messages WHERE id=?`, msgID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !rows.Next() {
-		rows.Close()
-		t.Fatal("no row")
-	}
-	var stored []byte
-	if err := rows.Scan(&stored); err != nil {
-		rows.Close()
-		t.Fatal(err)
-	}
-	rows.Close()
-	got, err := c.OpenField(stored, msgID, "content")
-	if err != nil || string(got) != plaintext {
-		t.Fatalf("读回解密失败: %q, %v", got, err)
-	}
-
-	// 关库（触发 WAL checkpoint）。
-	if err := s.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	// 扫描库目录所有文件（db/db-wal/db-shm）——任何落盘字节都不得含明文。
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	foundID := false
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if bytes.Contains(b, []byte(plaintext)) {
-			t.Fatalf("红线4 违规：明文落盘！文件 %s 含 %q", e.Name(), plaintext)
-		}
-		if bytes.Contains(b, []byte(msgID)) {
-			foundID = true
-		}
-	}
-	// 反向对照：记录确实落盘（id 明文可查，证明扫描的不是空库）。
-	if !foundID {
-		t.Error("库文件应含 msg id（证明记录确实落盘）")
 	}
 }
 

@@ -14,7 +14,8 @@ type migration struct {
 }
 
 // migrations 迁移注册表，按 version 升序。新增表/列时追加，勿改历史条目。
-// v1：app_meta（应用元数据 KV），T-M2-01 基座验证用；后续 M2/M3 追加 sessions/messages 等。
+// v1：app_meta（应用元数据 KV），T-M2-01 基座验证用。
+// v2：sessions / messages（T-M2-03），messages.content_cipher 存密文 BLOB。
 var migrations = []migration{
 	{
 		version: 1,
@@ -24,6 +25,30 @@ var migrations = []migration{
                 key   TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             )`,
+		},
+	},
+	{
+		version: 2,
+		name:    "sessions_messages",
+		stmts: []string{
+			`CREATE TABLE sessions (
+                id         TEXT PRIMARY KEY,
+                title      TEXT NOT NULL DEFAULT '',
+                model      TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )`,
+			`CREATE TABLE messages (
+                seq            INTEGER PRIMARY KEY AUTOINCREMENT,
+                id             TEXT NOT NULL UNIQUE,
+                session_id     TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                role           TEXT NOT NULL,
+                content_cipher BLOB NOT NULL,
+                model          TEXT NOT NULL DEFAULT '',
+                created_at     INTEGER NOT NULL
+            )`,
+			`CREATE INDEX idx_messages_session_seq ON messages(session_id, seq)`,
+			`CREATE INDEX idx_sessions_updated ON sessions(updated_at)`,
 		},
 	},
 }
