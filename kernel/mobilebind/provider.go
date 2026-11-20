@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"star-river/kernel/adapter/anthropic"
-	"star-river/kernel/adapter/gemini"
 	"star-river/kernel/adapter/openai"
 	"star-river/kernel/core/types"
 )
@@ -50,43 +48,10 @@ func ChatProvider() string {
 // chatSend 统一发送函数：入参用 openai.ToolDef 作规范工具定义；返回应答模型名。
 type chatSend func(ctx context.Context, model string, msgs []types.Message, defs []openai.ToolDef, emit func(types.StreamEvent)) (string, error)
 
-// buildSender 依当前 provider 构造 sender。
+// buildSender 构造 sender：内部统一走 dispatch，并叠加 router 主备失败切换。
 func buildSender(baseURL, apiKey string) chatSend {
-	switch ChatProvider() {
-	case "anthropic":
-		c := anthropic.New(baseURL, apiKey)
-		return func(ctx context.Context, model string, msgs []types.Message, defs []openai.ToolDef, emit func(types.StreamEvent)) (string, error) {
-			tds := make([]anthropic.ToolDef, 0, len(defs))
-			for _, d := range defs {
-				tds = append(tds, anthropic.ToolDef{Name: d.Name, Description: d.Description, Parameters: d.Parameters})
-			}
-			res, err := c.Chat(ctx, anthropic.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: tds}, emit)
-			if err != nil {
-				return "", err
-			}
-			return res.Model, nil
-		}
-	case "gemini":
-		c := gemini.New(baseURL, apiKey)
-		return func(ctx context.Context, model string, msgs []types.Message, defs []openai.ToolDef, emit func(types.StreamEvent)) (string, error) {
-			tds := make([]gemini.ToolDef, 0, len(defs))
-			for _, d := range defs {
-				tds = append(tds, gemini.ToolDef{Name: d.Name, Description: d.Description, Parameters: d.Parameters})
-			}
-			res, err := c.Chat(ctx, gemini.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: tds}, emit)
-			if err != nil {
-				return "", err
-			}
-			return res.Model, nil
-		}
-	default: // openai
-		c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
-		return func(ctx context.Context, model string, msgs []types.Message, defs []openai.ToolDef, emit func(types.StreamEvent)) (string, error) {
-			res, err := c.Chat(ctx, openai.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: defs}, emit)
-			if err != nil {
-				return "", err
-			}
-			return res.Model, nil
-		}
+	return func(ctx context.Context, model string, msgs []types.Message, defs []openai.ToolDef, emit func(types.StreamEvent)) (string, error) {
+		return sendWithFailover(ctx, baseURL, apiKey, model, msgs, defs, emit)
 	}
 }
+

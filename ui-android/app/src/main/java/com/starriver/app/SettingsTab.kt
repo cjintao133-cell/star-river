@@ -163,6 +163,10 @@ private fun AdvancedSettings(
     var embBase by remember { mutableStateOf(EmbedPrefs.base(ctx)) }
     var embModel by remember { mutableStateOf(EmbedPrefs.model(ctx)) }
     var embKey by remember { mutableStateOf(EmbedPrefs.key(ctx)) }
+    var bkBase by remember { mutableStateOf(BackupPrefs.base(ctx)) }
+    var bkModel by remember { mutableStateOf(BackupPrefs.model(ctx)) }
+    var bkKey by remember { mutableStateOf(BackupPrefs.key(ctx)) }
+    var bkProvider by remember { mutableStateOf(BackupPrefs.provider(ctx)) }
     var chatProto by remember { mutableStateOf(ProtoPrefs.provider(ctx)) }
     var proStatus by remember { mutableStateOf(ProactiveUi.status()) }
     var backupNote by remember { mutableStateOf("") }
@@ -293,6 +297,16 @@ private fun AdvancedSettings(
         OutlinedTextField(value = embModel, onValueChange = { embModel = it }, label = { Text("embedding 模型（如 text-embedding-3-small）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         OutlinedTextField(value = embKey, onValueChange = { embKey = it }, label = { Text("embedding API Key（加密存储）") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
 
+        Text("灾备备用端点（可选：主端点失败自动切）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("openai" to "OpenAI", "anthropic" to "Claude", "gemini" to "Gemini").forEach { (k, label) ->
+                OutlinedButton(onClick = { bkProvider = k }, enabled = bkProvider != k) { Text(label) }
+            }
+        }
+        OutlinedTextField(value = bkBase, onValueChange = { bkBase = it }, label = { Text("备用端点 base（留空=不使用灾备）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = bkModel, onValueChange = { bkModel = it }, label = { Text("备用模型 id") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = bkKey, onValueChange = { bkKey = it }, label = { Text("备用 API Key（加密存储）") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+
         Text("数据备份（换机/防丢）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { exportLauncher.launch("star-river-backup.zip") }) { Text("导出备份") }
@@ -315,6 +329,8 @@ private fun AdvancedSettings(
             ImagePrefs.setEditPath(ctx, imgEditPath.trim()); ImagePrefs.setApiKey(ctx, imgKey.trim())
             EmbedPrefs.setBase(ctx, embBase.trim()); EmbedPrefs.setModel(ctx, embModel.trim()); EmbedPrefs.setKey(ctx, embKey.trim())
             EmbedPrefs.apply(ctx)
+            BackupPrefs.setBase(ctx, bkBase.trim()); BackupPrefs.setModel(ctx, bkModel.trim()); BackupPrefs.setKey(ctx, bkKey.trim()); BackupPrefs.setProvider(ctx, bkProvider)
+            BackupPrefs.apply(ctx)
             val vr = VisualCfg.initIfConfigured(ctx)
             saved = if (vr == "not-configured") "已保存（画图模型未配全）" else if (vr.startsWith("ERR")) "已保存，画图初始化失败：$vr" else "已保存，画图模型就绪"
         }, modifier = Modifier.padding(top = 8.dp)) { Text("保存进阶设置") }
