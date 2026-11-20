@@ -147,6 +147,7 @@ private fun AdvancedSettings(
     var ttsVoice by remember { mutableStateOf(Prefs.ttsVoice(ctx)) }
     var ttsFormat by remember { mutableStateOf(Prefs.ttsFormat(ctx)) }
     var nativeSearch by remember { mutableStateOf(Prefs.nativeSearch(ctx)) }
+    var communityBase by remember { mutableStateOf(CommunityPrefs.base(ctx)) }
     var saved by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -207,6 +208,12 @@ private fun AdvancedSettings(
             Switch(checked = nativeSearch, onCheckedChange = { nativeSearch = it })
         }
 
+        Text("社区源（Git 仓库 / 自建 API，同一契约）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        OutlinedTextField(value = communityBase, onValueChange = { communityBase = it },
+            label = { Text("base，如 https://raw.githubusercontent.com/你/repo/main/") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Text("留空=用内置种子。见 docs/community-ecosystem-contract.md", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
         Button(onClick = {
             Prefs.setSearchProvider(ctx, provider)
             Prefs.setSearxngBase(ctx, searxng.trim())
@@ -214,6 +221,7 @@ private fun AdvancedSettings(
             Prefs.setTtsVoice(ctx, ttsVoice.trim().ifBlank { "alloy" })
             Prefs.setTtsFormat(ctx, ttsFormat.trim().ifBlank { "mp3" })
             Prefs.setNativeSearch(ctx, nativeSearch)
+            CommunityPrefs.setBase(ctx, communityBase.trim())
             saved = "已保存进阶设置"
         }, modifier = Modifier.padding(top = 8.dp)) { Text("保存进阶设置") }
         if (saved.isNotEmpty()) Text(saved, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)

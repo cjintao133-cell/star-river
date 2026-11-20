@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "updated": "2026-11-20T00:00:00Z",
+  "plugins": [
+    {
+      "id": "tavily",
+      "name": "tavily",
+      "description": "网页搜索，摘要省 token，适合日常",
+      "transport": "http",
+      "endpoint": "https://mcp.tavily.com/mcp",
+      "categories": ["search"],
+      "homepage": "https://tavily.com",
+      "publisher": "tavily",
+      "auth": { "type": "none" },
+      "version": "1.0.0"
+    },
+    {
+      "id": "brave-search",
+      "name": "brave-search",
+      "description": "Brave Search MCP，需 API Key",
+      "transport": "sse",
+      "endpoint": "https://mcp.brave.com/sse",
+      "categories": ["search"],
+      "homepage": "https://brave.com/search/api/",
+      "publisher": "brave",
+      "auth": { "type": "header", "header": "Authorization", "hint": "Bearer <你的 Brave Key>" },
+      "version": "1.0.0"
+    },
+    {
+      "id": "filesystem",
+      "name": "filesystem",
+      "description": "文件系统 MCP（stdio 仅桌面可用，安卓置灰）",
+      "transport": "stdio",
+      "endpoint": "",
+      "categories": ["files"],
+      "auth": { "type": "none" },
+      "version": "1.0.0"
+    }
+  ]
+}

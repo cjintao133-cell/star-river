@@ -25,6 +25,10 @@ object Bg {
         }.start()
     }
     fun main(fn: () -> Unit) { h.post(fn) }
+    /** 通用异步：work 在后台线程跑（可返回任意值/网络/DB），done 回主线程。异常→null。 */
+    fun async(work: () -> Any?, done: (Any?) -> Unit) {
+        Thread { val r = try { work() } catch (t: Throwable) { null }; h.post { done(r) } }.start()
+    }
 }
 
 /** 会话（对应 sessions 表一行）。 */
@@ -209,4 +213,15 @@ object SafetyPrefs {
     fun setWatchdog(ctx: Context, v: Boolean) = p(ctx).edit().putBoolean("safety.watchdog", v).apply()
     fun sandboxStrict(ctx: Context): Boolean = p(ctx).getBoolean("safety.sandbox_strict", true)
     fun setSandboxStrict(ctx: Context, v: Boolean) = p(ctx).edit().putBoolean("safety.sandbox_strict", v).apply()
+}
+
+/** 应用级 Context（社区拉取等无 Compose 作用域处使用；MainActivity.onCreate 设置）。 */
+object AppCtx { lateinit var ctx: Context }
+
+/** 社区源 URL 偏好（Git 仓库 raw / jsDelivr / Pages / 自建 API，同一契约）。 */
+object CommunityPrefs {
+    private const val PREF = "star_river_prefs"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun base(ctx: Context): String = p(ctx).getString("community.base", "") ?: ""
+    fun setBase(ctx: Context, v: String) = p(ctx).edit().putString("community.base", v).apply()
 }

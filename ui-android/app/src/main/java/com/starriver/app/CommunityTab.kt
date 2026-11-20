@@ -32,35 +32,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import mobilebind.Mobilebind
 import org.json.JSONArray
-import org.json.JSONObject
 
 /**
- * 社区：论坛体（联网后端待部署，先种子数据+优雅降级） / MCP 集市（插件单独启用=内核热插拔，不重启） /
- * 生态接入（三档说明）。进入 MCP 集市自动加载已装插件（McpInit/Restore 在 KernelBoot 完成）。
+ * 社区：论坛体 / MCP 集市 / 生态接入。
+ * 后端 = Git 仓库静态 JSON（docs/community-ecosystem-contract.md），HTTP GET 拉取，失败回落种子。
+ * MCP 插件单独启用 = 内核热插拔（mcpSetEnabled），不重启。
  */
 @Composable
 fun CommunityTab() {
     var section by remember { mutableStateOf(0) }
     var tick by remember { mutableStateOf(0) }
-    val ctx = LocalContext.current
-    var servers by remember { mutableStateOf<List<McpServerUi>>(emptyList()) }
-    var toolCount by remember { mutableStateOf(0) }
-    var busy by remember { mutableStateOf(false) }
-    var err by remember { mutableStateOf("") }
-
-    fun refresh() {
-        busy = true
-        Bg.run({ Mobilebind.mcpServers() }) { raw ->
-            servers = parseMcpServers(raw)
-            Bg.run({ Mobilebind.mcpTools() }) { t ->
-                toolCount = try { JSONArray(t).length() } catch (e: Exception) { 0 }
-            }
-            busy = false
-        }
-    }
-    // 进 MCP 集市/生态区自动加载；论坛区也刷新（论坛后端待部署→种子+降级说明）
-    LaunchedEffect(section, tick) { if (section != 0) refresh() }
-
     Column(Modifier.fillMaxSize().padding(12.dp)) {
         Text("社区", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 8.dp)) {
@@ -69,48 +50,53 @@ fun CommunityTab() {
             OutlinedButton(onClick = { section = 2 }) { Text("生态接入", fontWeight = if (section == 2) FontWeight.Bold else FontWeight.Normal) }
         }
         when (section) {
-            0 -> ForumSection()
-            1 -> MarketSection(servers, toolCount, busy, err, onRefresh = { tick++ })
+            0 -> ForumSection(tick)
+            1 -> MarketSection(tick) { tick++ }
             else -> EcosystemSection()
         }
     }
 }
 
-// —— 论坛（联网后端待部署，种子 + 优雅降级） ——
-private data class Post(val title: String, val author: String, val replies: Int, val snippet: String)
-
+// —— 论坛：远端 posts.json，失败回落种子 ——
 @Composable
-private fun ForumSection() {
-    var status by remember { mutableStateOf("离线种子数据（论坛后端待部署，联网即自动拉取）") }
+private fun ForumSection(tick: Int) {
+    var posts by remember { mutableStateOf<List<Community.ForumPost>?>(null) }
+    var offline by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
     if (showReport) ReportDialog { showReport = false }
-    val posts = remember {
-        listOf(
-            Post("求助：2GB 安卓跑动效背景怎么降级不卡", "新人阿柴", 7, "开了流星背景，切后台回来微微掉帧"),
-            Post("角色卡 V2 世界书触发深度怎么设", "示例鱼罐头", 23, "递归到 4 层开始灌水，大家一般设多少"),
-            Post("自拍改头像效果分享（附参数）", "星河观察者", 31, "ComfyUI 走云 GPU，出图挺稳"),
-        )
+    LaunchedEffect(tick) {
+        Bg.async({ Community.fetchPosts() }) { r ->
+            @Suppress("UNCHECKED_CAST") val p = r as? List<Community.ForumPost>
+            if (p == null) { offline = true; posts = seedPosts() } else { offline = false; posts = p }
+        }
     }
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         Card(Modifier.fillMaxWidth()) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(status, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                Text(if (offline) "离线种子（社区源未配置/不可达，设置‑进阶 可填源）" else "已连社区源",
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                 TextButton(onClick = { showReport = true }) { Text("⚑ 举报") }
             }
         }
-        posts.forEach { p ->
+        (posts ?: emptyList()).forEach { p ->
             Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     Text(p.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(p.snippet, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                    Text("${p.author} · 💬 ${p.replies}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+                    if (p.body.isNotBlank()) Text(p.body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                    Text("${p.author} · 💬 ${p.replies}" + if (p.tags.isNotEmpty()) " · " + p.tags.joinToString("/") else "", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
     }
 }
 
-// —— MCP 集市：安装 / 单独启用(热插拔) / 卸载 ——
+private fun seedPosts(): List<Community.ForumPost> = listOf(
+    Community.ForumPost("s1", "2GB 安卓跑动效背景怎么降级不卡", "新人阿柴", 7, listOf("help"), "开了流星背景，切后台回来微微掉帧。"),
+    Community.ForumPost("s2", "角色卡 V2 世界书触发深度怎么设", "示例鱼罐头", 23, listOf("角色卡"), "递归到 4 层开始灌水。"),
+    Community.ForumPost("s3", "自拍改头像效果分享（附参数）", "星河观察者", 31, listOf("视觉"), "ComfyUI 走云 GPU，垫图 0.6。"),
+)
+
+// —— MCP 集市：远端目录（失败回落种子）+ 已装插件热插拔 ——
 private data class McpServerUi(val name: String, val endpoint: String, val enabled: Boolean, val connected: Boolean, val toolCount: Int, val err: String)
 
 private fun parseMcpServers(raw: String): List<McpServerUi> {
@@ -124,26 +110,84 @@ private fun parseMcpServers(raw: String): List<McpServerUi> {
     return out
 }
 
-private data class SeedPlugin(val name: String, val endpoint: String, val desc: String)
+private fun seedCatalog(): List<Community.CatalogPlugin> = listOf(
+    Community.CatalogPlugin("tavily", "tavily", "网页搜索，摘要省 token", "http", "https://mcp.tavily.com/mcp", "none", "Authorization", "", listOf("search")),
+    Community.CatalogPlugin("brave-search", "brave-search", "Brave 搜索（需 Key）", "sse", "https://mcp.brave.com/sse", "header", "Authorization", "Bearer <你的 Brave Key>", listOf("search")),
+)
 
 @Composable
-private fun MarketSection(servers: List<McpServerUi>, toolCount: Int, busy: Boolean, err: String, onRefresh: () -> Unit) {
-    val ctx = LocalContext.current
-    var showAdd by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf("") }
-    var endpoint by remember { mutableStateOf("") }
-    var header by remember { mutableStateOf("") }
-    var addNote by remember { mutableStateOf("") }
-    val seeds = remember {
-        listOf(
-            SeedPlugin("tavily", "https://mcp.tavily.com/mcp", "网页搜索（摘要省 token）"),
-            SeedPlugin("brave-search", "https://mcp.brave.com/sse", "Brave 搜索 MCP"),
-            SeedPlugin("filesystem", "", "文件系统（stdio 仅桌面，HTTP 端点自填）"),
-        )
+private fun MarketSection(tick: Int, onChanged: () -> Unit) {
+    var servers by remember { mutableStateOf<List<McpServerUi>>(emptyList()) }
+    var catalog by remember { mutableStateOf<List<Community.CatalogPlugin>>(emptyList()) }
+    var catalogOnline by remember { mutableStateOf(false) }
+    var toolCount by remember { mutableStateOf(0) }
+    var busy by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
+    var showManual by remember { mutableStateOf(false) }
+    var mName by remember { mutableStateOf("") }
+    var mEndpoint by remember { mutableStateOf("") }
+    var mHeader by remember { mutableStateOf("") }
+    var pendingAuthFor by remember { mutableStateOf<Community.CatalogPlugin?>(null) }
+    var pendingAuthVal by remember { mutableStateOf("") }
+
+    fun refreshServers() {
+        busy = true
+        Bg.run({ Mobilebind.mcpServers() }) { raw ->
+            servers = parseMcpServers(raw)
+            Bg.run({ Mobilebind.mcpTools() }) { t -> toolCount = try { JSONArray(t).length() } catch (e: Exception) { 0 } }
+            busy = false
+        }
     }
+    LaunchedEffect(tick) {
+        refreshServers()
+        Bg.async({ Community.fetchCatalog() }) { r ->
+            @Suppress("UNCHECKED_CAST") val cat = r as? List<Community.CatalogPlugin>
+            if (cat == null) { catalogOnline = false; catalog = seedCatalog() } else { catalogOnline = true; catalog = cat }
+        }
+    }
+
+    fun install(p: Community.CatalogPlugin, authValue: String) {
+        if (p.transport == "stdio") { note = "${p.name} 是 stdio 型，仅桌面可用，安卓跳过"; return }
+        val header = if (p.authType == "header" && authValue.isNotBlank()) "{\"${p.authHeader}\":\"${authValue.replace("\"", "\\\"")}\"}" else ""
+        note = "安装中…"
+        Bg.run({ Mobilebind.mcpAddServer(p.name, p.endpoint, header) }) { r ->
+            note = if (r == "OK") { onChanged(); "已安装 ${p.name}" } else r
+            pendingAuthFor = null; pendingAuthVal = ""
+        }
+    }
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("已装插件 · 可用工具 $toolCount 个 · ${servers.size} 个插件", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp)
+        Text("目录源：" + (if (catalogOnline) "已连社区仓库" else "内置种子（可在 设置‑进阶 填社区源 URL）") + " · 已装 ${servers.size} 插件 / 可用 $toolCount 工具",
+            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Text("可安装（市场目录）", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        catalog.forEach { p ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(p.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(p.description, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${p.transport} · " + (if (p.authType == "header") "需 Key" else "免 Key") +
+                                if (p.transport == "stdio") " · 仅桌面" else "", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Button(onClick = {
+                            if (p.transport == "stdio") { note = "${p.name} 仅桌面可用"; return@Button }
+                            if (p.authType == "header") { pendingAuthFor = p; pendingAuthVal = "" } else install(p, "")
+                        }, enabled = !busy) { Text("安装") }
+                    }
+                    if (pendingAuthFor?.id == p.id) {
+                        OutlinedTextField(pendingAuthVal, { pendingAuthVal = it }, label = { Text(p.authHint.ifBlank { "Key 值" }) }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = { install(p, pendingAuthVal) }) { Text("确认安装") }
+                            TextButton(onClick = { pendingAuthFor = null }) { Text("取消") }
+                        }
+                    }
+                }
+            }
+        }
+
+        Text("已装插件（开关=热插拔，不重启）", fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
         servers.forEach { s ->
             Card(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -156,61 +200,54 @@ private fun MarketSection(servers: List<McpServerUi>, toolCount: Int, busy: Bool
                                 s.connected -> "已连接 · ${s.toolCount} 工具"
                                 else -> "未连接（启用即连）"
                             },
-                            fontSize = 11.sp,
-                            color = if (s.err.isNotBlank()) Color.Red else MaterialTheme.colorScheme.primary,
+                            fontSize = 11.sp, color = if (s.err.isNotBlank()) Color.Red else MaterialTheme.colorScheme.primary,
                         )
                     }
-                    Switch(checked = s.enabled, onCheckedChange = { v -> Bg.run({ Mobilebind.mcpSetEnabled(s.name, v) }) { onRefresh() } })
-                    TextButton(onClick = { Bg.run({ Mobilebind.mcpRemoveServer(s.name) }) { onRefresh() } }) { Text("🗑") }
+                    Switch(checked = s.enabled, onCheckedChange = { v -> Bg.run({ Mobilebind.mcpSetEnabled(s.name, v) }) { onChanged() } })
+                    TextButton(onClick = { Bg.run({ Mobilebind.mcpRemoveServer(s.name) }) { onChanged() } }) { Text("🗑") }
                 }
             }
         }
+        if (servers.isEmpty()) Text("尚未安装插件。", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { showAdd = !showAdd }) { Text("＋ 添加插件") }
-            OutlinedButton(onClick = onRefresh) { Text(if (busy) "刷新中…" else "刷新") }
+            OutlinedButton(onClick = { showManual = !showManual }) { Text("＋ 手动添加") }
+            OutlinedButton(onClick = { onChanged() }) { Text(if (busy) "刷新中…" else "刷新") }
         }
-        if (showAdd) {
-            Text("填 MCP 端点（HTTP/SSE）。stdio 类仅桌面可用。", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(name, { name = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(endpoint, { endpoint = it }, label = { Text("MCP 端点 URL") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(header, { header = it }, label = { Text("请求头 JSON（如 {\"Authorization\":\"Bearer x\"}，可选）") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
+        if (showManual) {
+            OutlinedTextField(mName, { mName = it }, label = { Text("名称") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(mEndpoint, { mEndpoint = it }, label = { Text("MCP 端点 URL（https，HTTP/SSE）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+            OutlinedTextField(mHeader, { mHeader = it }, label = { Text("请求头 JSON（可选）") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation())
             Button(onClick = {
-                val n = name.trim(); val e = endpoint.trim()
-                if (n.isEmpty() || e.isEmpty()) { addNote = "名称/端点必填"; return@Button }
-                addNote = "连接中…"
-                Bg.run({ Mobilebind.mcpAddServer(n, e, header.trim()) }) { r ->
-                    addNote = if (r == "OK") { name = ""; endpoint = ""; header = ""; showAdd = false; onRefresh(); "已安装" } else r
+                if (mName.trim().isEmpty() || mEndpoint.trim().isEmpty()) { note = "名称/端点必填"; return@Button }
+                Bg.run({ Mobilebind.mcpAddServer(mName.trim(), mEndpoint.trim(), mHeader.trim()) }) { r ->
+                    note = if (r == "OK") { mName = ""; mEndpoint = ""; mHeader = ""; showManual = false; onChanged(); "已安装" } else r
                 }
             }) { Text("安装并连接") }
-            if (addNote.isNotEmpty()) Text(addNote, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text("推荐（点填充到上面表单）：", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-        seeds.forEach { sd ->
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(sd.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Text(sd.desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    TextButton(onClick = { name = sd.name; endpoint = sd.endpoint; showAdd = true }) { Text("添加") }
-                }
-            }
-        }
-        Text("说明：插件 key 在设置‑进阶填；插件启用/停用=运行时热插拔，不重启。市场目录后端待部署，当前用内置种子 + 手动填端点。",
+        if (note.isNotEmpty()) Text(note, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("说明：插件运行在远端 MCP server，本体不在仓库；Git 仓库只放目录（endpoint）。stdio 型仅桌面。",
             fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
-// —— 生态接入（三档说明，来自 docs/ecosystem-ingestion.md） ——
+// —— 生态接入（三分档说明 + 用 Git 仓库当后端的说明） ——
 @Composable
 private fun EcosystemSection() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("生态接入", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text("以 MCP 为边界吃生态；插件一律外部进程、可选可关可沙盒。", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        EcoTier("① MCP 原生 — 今天就能用", "任何以 MCP server 发布的能力（搜索/文件/浏览器/数据库…）直接挂，零代码。", true)
+        EcoTier("① MCP 原生 — 今天就能用", "任何以 MCP server 发布的能力直接挂，零代码。", true)
         EcoTier("② 数据/格式导入 — 已支持", "角色卡 V2 / 世界书 / 预设 / 主题包（数据非代码），本地导入。", true)
-        EcoTier("③ 兼容服务器 — 需逐框架写，桌面侧", "给 AstrBot(Py)/SillyTavern(JS) 等写独立进程兼容层，需拖其运行时，不进安卓内核。", false)
+        EcoTier("③ 兼容服务器 — 需逐框架写，桌面侧", "给 AstrBot(Py)/SillyTavern(JS) 写独立进程兼容层，不进安卓内核。", false)
         EcoTier("④ 源码移植 — 人工重写", "要对齐具体能力就重写，最稳。", false)
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp)) {
+                Text("社区后端 = Git 仓库（当前形态）", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("market/index.json（目录）+ forum/posts.json（帖子）放仓库，客户端 HTTPS 拉取。零服务器、PR 审核即上架、可版本化。以后换真后端，返回同样 JSON 即可平滑切换。见 docs/community-ecosystem-contract.md。",
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp)) {
                 Text("反向护城河", fontWeight = FontWeight.Bold, fontSize = 13.sp)
