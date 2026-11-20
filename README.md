@@ -1,7 +1,7 @@
 # Star River（星河）
 
-> 纯本地、零上传、BYOK（自带密钥）的「赛博生命容器」内核 —— Android 与 Windows 双端。
-> 情绪、记忆、主动能力都住在本地，密钥只在你手里，任何用户数据不出设备。
+> 设备侧「赛博生命」内核，BYOK（自带密钥）—— Android 与 Windows 双端。
+> 记忆/情绪/主动与密钥都住在本地；推理走你选的模型端点（云端或本机 Ollama 均可），本项目无自有后端、零遥测。
 
 > **状态**：本仓库聚焦**内核 / 框架**。Android 与桌面 **UI 已暂时移出主树**（开发中，参考实现为 WIP）；
 > 需要 UI 可切 `with-ui` 分支或 `pre-ui-strip` tag 取回。请以**内核架构 / 协议 / 数据安全**评估本项目。
@@ -44,13 +44,13 @@ star-river/
     native/{bridge,vector}  mobilebind/ desktopbind/
   native/       C 模块（device_probe、向量检索）
   cmd/srchat/       最小 CLI 聊天闭环
-  docs/             架构、许可、平台能力表、M0 结论
+  docs/             产品说明/使用/FAQ/架构/许可/平台能力/隐私边界（见 docs/README.md）
   scripts/          构建与守卫脚本
 ```
 
 ## 快速开始
 
-前置：Go（见 `go.mod`，1.22+）、C 工具链；Android 另需 NDK r26+/JDK17/Gradle 8.9。
+前置：Go 1.26+（见 `go.mod`）、C 工具链；Android 另需 NDK r26+/JDK17/Gradle 8.9。
 
 ```sh
 # 全仓门禁（构建 / 静态检查 / 竞态测试）
@@ -96,4 +96,4 @@ go run ./cmd/srchat -base https://host/v1 -model <model> -keyfile /path/to/key
 
 ## 状态
 
-内核开发中（多项里程碑已完成，详见 `docs/STATUS.md`）。UI 精修与真机验收集中在后期统一进行。
+内核开发中（未闭环项与真机未验项见 `KNOWN-ISSUES.md`；文档索引见 `docs/README.md`）。UI 精修与真机验收集中在后期统一进行。
