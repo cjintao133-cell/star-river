@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
@@ -28,6 +29,9 @@ type OpenAIImageBackend struct {
 
 	// 额外请求头（多用于第三方 relay）
 	Header http.Header
+
+	// EditPath 图生图（垫图）端点路径，默认 /images/edits；可按服务商覆盖。
+	EditPath string
 }
 
 // Name 实现 ImageBackend。
@@ -58,12 +62,16 @@ func (b *OpenAIImageBackend) Generate(ctx context.Context, req GenerateRequest) 
 	if strings.TrimSpace(req.Prompt) == "" {
 		return GenerateResult{}, &APIError{Kind: "protocol", Message: "openai-image: empty prompt"}
 	}
-	if len(req.ImageRef) > 0 {
-		return GenerateResult{}, &APIError{Kind: "protocol", Message: "openai-image: image reference (img2img) not supported"}
-	}
 	model := req.Model
 	if model == "" {
 		model = b.Model
+	}
+	if len(req.ImageRef) > 0 {
+		hc := b.HTTP
+		if hc == nil {
+			hc = &http.Client{Timeout: defaultImageHTTPTimeout}
+		}
+		return b.generateEdit(ctx, hc, req, model)
 	}
 	body := openAIImageReq{
 		Model:          model,
@@ -112,6 +120,11 @@ func (b *OpenAIImageBackend) Generate(ctx context.Context, req GenerateRequest) 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return GenerateResult{}, &APIError{Kind: "http", Message: fmt.Sprintf("status %d: %s", resp.StatusCode, truncate(string(bodyBytes), 200))}
 	}
+	return b.parseImages(ctx, hc, bodyBytes, model)
+}
+
+// parseImages 解析图像 API 响应体（generations 与 edits 共用）。
+func (b *OpenAIImageBackend) parseImages(ctx context.Context, hc *http.Client, bodyBytes []byte, model string) (GenerateResult, error) {
 	var out openAIImageResp
 	if err := json.Unmarshal(bodyBytes, &out); err != nil {
 		return GenerateResult{}, &APIError{Kind: "protocol", Message: "bad json: " + err.Error()}
@@ -144,6 +157,71 @@ func (b *OpenAIImageBackend) Generate(ctx context.Context, req GenerateRequest) 
 		return GenerateResult{}, &APIError{Kind: "protocol", Message: "empty images"}
 	}
 	return res, nil
+}
+
+// generateEdit 图生图（垫图）：POST {BaseURL}{EditPath}（multipart，image=人设图 + prompt）。
+// 有垫图走这里保角色一致性，无需 ComfyUI。
+func (b *OpenAIImageBackend) generateEdit(ctx context.Context, hc *http.Client, req GenerateRequest, model string) (GenerateResult, error) {
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	mime := http.DetectContentType(req.ImageRef)
+	if mime == "" || !strings.HasPrefix(mime, "image/") {
+		mime = "image/png"
+	}
+	fname := "persona.png"
+	if strings.HasSuffix(mime, "jpeg") {
+		fname = "persona.jpg"
+	}
+	fw, err := mw.CreateFormFile("image", fname)
+	if err != nil {
+		return GenerateResult{}, &APIError{Kind: "protocol", Message: "multipart: " + err.Error()}
+	}
+	if _, err := fw.Write(req.ImageRef); err != nil {
+		return GenerateResult{}, &APIError{Kind: "protocol", Message: "multipart write: " + err.Error()}
+	}
+	_ = mw.WriteField("prompt", req.Prompt)
+	if model != "" {
+		_ = mw.WriteField("model", model)
+	}
+	_ = mw.WriteField("n", "1")
+	_ = mw.WriteField("response_format", "b64_json")
+	if req.Width > 0 && req.Height > 0 {
+		_ = mw.WriteField("size", fmt.Sprintf("%dx%d", req.Width, req.Height))
+	}
+	if err := mw.Close(); err != nil {
+		return GenerateResult{}, &APIError{Kind: "protocol", Message: "multipart close: " + err.Error()}
+	}
+	path := b.EditPath
+	if path == "" {
+		path = "/images/edits"
+	}
+	url := strings.TrimRight(b.BaseURL, "/") + path
+	hreq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &buf)
+	if err != nil {
+		return GenerateResult{}, &APIError{Kind: "protocol", Message: err.Error()}
+	}
+	hreq.Header.Set("Content-Type", mw.FormDataContentType())
+	if b.APIKey != "" {
+		hreq.Header.Set("Authorization", "Bearer "+b.APIKey)
+	}
+	for k, vs := range b.Header {
+		for _, v := range vs {
+			hreq.Header.Add(k, v)
+		}
+	}
+	resp, err := hc.Do(hreq)
+	if err != nil {
+		return GenerateResult{}, &APIError{Kind: "network", Message: err.Error()}
+	}
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, maxImageRespBytes))
+	if err != nil {
+		return GenerateResult{}, &APIError{Kind: "network", Message: err.Error()}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return GenerateResult{}, &APIError{Kind: "http", Message: fmt.Sprintf("status %d: %s", resp.StatusCode, truncate(string(bodyBytes), 200))}
+	}
+	return b.parseImages(ctx, hc, bodyBytes, model)
 }
 
 // fetchImage 下载 url 返回的图像字节。

@@ -94,9 +94,9 @@ func TestOpenAIImageErrors(t *testing.T) {
 	_, err = (&OpenAIImageBackend{BaseURL: "http://127.0.0.1:0"}).Generate(context.Background(), GenerateRequest{})
 	mustKindVisual(t, err, "protocol")
 
-	// img2img 不支持
+	// img2img 现走 /images/edits（不再报 not supported）；base 不可达 → network
 	_, err = (&OpenAIImageBackend{BaseURL: "http://127.0.0.1:0"}).Generate(context.Background(), GenerateRequest{Prompt: "x", ImageRef: []byte("r")})
-	mustKindVisual(t, err, "protocol")
+	mustKindVisual(t, err, "network")
 }
 
 func TestComfyUINilBuilder(t *testing.T) {
