@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,6 +75,11 @@ class MainActivity : ComponentActivity() {
 private fun App(initialConfig: ChatConfig, persist: (ChatConfig) -> Unit) {
     var config by remember { mutableStateOf(initialConfig) }
     var editing by remember { mutableStateOf(!initialConfig.isConfigured) }
+    // 会话状态提升到顶层：切到设置页再回来，聊天记录不丢。
+    val sessions = remember { mutableStateListOf(UiSession(idGen.getAndIncrement(), "对话 1")) }
+    var currentId by remember { mutableStateOf(sessions.first().id) }
+    var busy by remember { mutableStateOf(false) }
+    var input by remember { mutableStateOf("") }
 
     if (editing) {
         SettingsScreen(
@@ -89,7 +93,17 @@ private fun App(initialConfig: ChatConfig, persist: (ChatConfig) -> Unit) {
             },
         )
     } else {
-        ChatScreen(config = config, onOpenSettings = { editing = true })
+        ChatScreen(
+            config = config,
+            sessions = sessions,
+            currentId = currentId,
+            onSelect = { currentId = it },
+            busy = busy,
+            setBusy = { busy = it },
+            input = input,
+            setInput = { input = it },
+            onOpenSettings = { editing = true },
+        )
     }
 }
 
@@ -113,7 +127,7 @@ private fun SettingsScreen(
             OutlinedTextField(value = base, onValueChange = { base = it }, label = { Text("端点 base（如 https://api.siliconflow.cn/v1）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(value = key, onValueChange = { key = it }, label = { Text("API Key") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
             OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("模型 id") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            OutlinedTextField(value = system, onValueChange = { system = it }, label = { Text("人设 system") }, modifier = Modifier.fillMaxWidth().widthIn(min = 120.dp), minLines = 3)
+            OutlinedTextField(value = system, onValueChange = { system = it }, label = { Text("人设 system") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = {
@@ -129,63 +143,86 @@ private fun SettingsScreen(
 }
 
 @Composable
-private fun ChatScreen(config: ChatConfig, onOpenSettings: () -> Unit) {
-    val sessions = remember { mutableStateListOf(UiSession(idGen.getAndIncrement(), "对话 1")) }
-    var currentId by remember { mutableStateOf(sessions.first().id) }
-    var input by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
+private fun ChatScreen(
+    config: ChatConfig,
+    sessions: MutableList<UiSession>,
+    currentId: Long,
+    onSelect: (Long) -> Unit,
+    busy: Boolean,
+    setBusy: (Boolean) -> Unit,
+    input: String,
+    setInput: (String) -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val uiHandler = remember { Handler(Looper.getMainLooper()) }
-
-    val current = sessions.first { it.id == currentId }
+    val current = sessions.firstOrNull { it.id == currentId } ?: sessions.first()
 
     fun send() {
         val text = input.trim()
         if (text.isEmpty() || busy) return
-        input = ""
-        busy = true
+        setInput("")
+        setBusy(true)
         val msgs = current.messages
         msgs.add(UiMessage(idGen.getAndIncrement(), "user", text))
         val placeholder = UiMessage(idGen.getAndIncrement(), "assistant", "", streaming = true)
         msgs.add(placeholder)
         val idx = msgs.size - 1
 
-        val sink = object : ChatSink {
-            override fun onDelta(s: String) {
-                uiHandler.post {
-                    val cur = msgs[idx]
-                    msgs[idx] = cur.copy(text = cur.text + s)
-                }
+        // 打字机节奏（拟真延迟）：网络再快也按节奏吐字，短回复顺、长回复追得上。
+        val target = StringBuilder()
+        var revealed = 0
+        var finished = false
+        var errMsg: String? = null
+        var stopped = false
+
+        lateinit var tick: Runnable
+        tick = Runnable {
+            if (stopped) return@Runnable
+            val e = errMsg
+            if (e != null) {
+                msgs[idx] = msgs[idx].copy(text = e, streaming = false)
+                setBusy(false)
+                stopped = true
+                return@Runnable
             }
-            override fun onDone(model: String) {
-                uiHandler.post {
-                    val cur = msgs[idx]
-                    msgs[idx] = cur.copy(streaming = false)
-                    busy = false
-                }
-            }
-            override fun onError(msg: String) {
-                uiHandler.post {
-                    val cur = msgs[idx]
-                    msgs[idx] = cur.copy(text = "[错误] " + msg, streaming = false)
-                    busy = false
-                }
+            val full = target.toString()
+            if (revealed < full.length) {
+                val backlog = full.length - revealed
+                val step = if (backlog > 80) 4 else if (backlog > 30) 2 else 1
+                revealed = minOf(full.length, revealed + step)
+                msgs[idx] = msgs[idx].copy(text = full.substring(0, revealed), streaming = true)
+                uiHandler.postDelayed(tick, 18)
+            } else if (finished) {
+                msgs[idx] = msgs[idx].copy(text = full, streaming = false)
+                setBusy(false)
+                stopped = true
+            } else {
+                uiHandler.postDelayed(tick, 18)
             }
         }
+
+        val sink = object : ChatSink {
+            override fun onDelta(s: String) {
+                uiHandler.post { target.append(s) }
+            }
+            override fun onDone(model: String) {
+                uiHandler.post { finished = true }
+            }
+            override fun onError(msg: String) {
+                uiHandler.post { errMsg = "[错误] " + msg }
+            }
+        }
+        uiHandler.post(tick)
         Thread {
             try {
                 Mobilebind.chatStream(config.baseUrl, config.apiKey, config.model, config.system, text, sink)
             } catch (t: Throwable) {
-                uiHandler.post {
-                    val cur = msgs[idx]
-                    msgs[idx] = cur.copy(text = "[异常] " + (t.message ?: "unknown"), streaming = false)
-                    busy = false
-                }
+                uiHandler.post { errMsg = "[异常] " + (t.message ?: "unknown") }
             }
         }.start()
     }
 
     Column(modifier = Modifier.fillMaxSize().imePadding()) {
-        // 顶栏
         Row(
             modifier = Modifier.fillMaxWidth().background(Color(0xFF1E88E5)).padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -194,39 +231,36 @@ private fun ChatScreen(config: ChatConfig, onOpenSettings: () -> Unit) {
             TextButton(onClick = {
                 val s = UiSession(idGen.getAndIncrement(), "对话 ${sessions.size + 1}")
                 sessions.add(s)
-                currentId = s.id
+                onSelect(s.id)
             }) { Text("＋新对话", color = Color.White) }
             TextButton(onClick = onOpenSettings) { Text("设置", color = Color.White) }
         }
 
-        // 会话切换（列表）
         if (sessions.size > 1) {
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 sessions.forEach { s ->
                     val selected = s.id == currentId
-                    TextButton(onClick = { currentId = s.id }) {
+                    TextButton(onClick = { onSelect(s.id) }) {
                         Text(s.title, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
                     }
                 }
             }
         }
 
-        // 消息列表
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(current.messages) { m -> MessageBubble(m) }
+            items(current.messages, key = { it.id }) { m -> MessageBubble(m) }
         }
 
-        // 输入
         Row(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedTextField(
-                value = input, onValueChange = { input = it },
+                value = input, onValueChange = setInput,
                 modifier = Modifier.weight(1f), label = { Text("说点什么…") }, maxLines = 4,
             )
             Button(onClick = { send() }, enabled = input.isNotBlank() && !busy) {
