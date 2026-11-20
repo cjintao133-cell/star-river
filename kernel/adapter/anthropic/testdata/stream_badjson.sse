@@ -1,0 +1,5 @@
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_bad","model":"claude-3-5-sonnet-20241022","usage":{"input_tokens":1,"output_tokens":1}}}
+
+event: content_block_delta
+data: {this is not valid json

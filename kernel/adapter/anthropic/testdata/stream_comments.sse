@@ -1,0 +1,15 @@
+: a leading comment line ignored
+event: ping
+data: {"type":"ping"}
+
+event: message_start
+data: {"type":"message_start","message":{"id":"msg_6","model":"claude-3-5-sonnet-20241022","usage":{"input_tokens":3,"output_tokens":1}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hi"}}
+
+event: message_stop
+data: {"type":"message_stop"}

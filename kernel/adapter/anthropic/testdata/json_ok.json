@@ -1,0 +1,1 @@
+{"id":"msg_j","type":"message","role":"assistant","model":"claude-3-7-sonnet","content":[{"type":"thinking","thinking":"Thinking."},{"type":"text","text":"Done."},{"type":"tool_use","id":"toolu_j1","name":"get_time","input":{}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":11,"output_tokens":5}}
