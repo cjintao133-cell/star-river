@@ -4,7 +4,7 @@ This guide describes only what actually works in the **current main tree (kernel
 
 ## 0. Prerequisites
 
-- **Go**: `go.mod` requires **go 1.26.0** (use a ≥1.26 toolchain; older versions fail to build).
+- **Go**: `go.mod` requires **go 1.26.11** (use a ≥1.26 toolchain; older versions fail to build).
 - **C toolchain**: `cc`/`gcc` (builds `native/` hot paths; the pure-Go part runs without it).
 - Optional: `staticcheck` (`go install honnef.co/go/tools/cmd/staticcheck@latest`).
 - Android builds additionally need NDK r26+, JDK17, Gradle 8.9 (only when producing an AAR).

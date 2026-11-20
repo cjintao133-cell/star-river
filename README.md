@@ -5,7 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/cjintao133-cell/star-river.svg)](https://pkg.go.dev/github.com/cjintao133-cell/star-river)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cjintao133-cell/star-river/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cjintao133-cell/star-river)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8.svg)](go.mod)
+[![Go](https://img.shields.io/badge/Go-1.26.11+-00ADD8.svg)](go.mod)
 
 ![hello-kernel demo](docs/assets/hello-kernel.svg)
 
@@ -85,7 +85,7 @@ star-river/
 
 ## Quick start
 
-Prerequisites: **Go 1.26+** (see `go.mod`), a C toolchain; for Android also NDK r26+/JDK17/Gradle 8.9.
+Prerequisites: **Go 1.26.11+** (see `go.mod`), a C toolchain; for Android also NDK r26+/JDK17/Gradle 8.9.
 
 ```sh
 # Full gate (build / vet / race tests)

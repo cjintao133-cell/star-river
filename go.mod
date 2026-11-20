@@ -1,6 +1,6 @@
 module star-river
 
-go 1.26.0
+go 1.26.11
 
 tool golang.org/x/mobile/cmd/gomobile
 
