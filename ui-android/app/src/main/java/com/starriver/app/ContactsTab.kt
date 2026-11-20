@@ -28,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -105,8 +107,8 @@ fun ContactsTab(config: ChatConfig, app: AppState, onOpenMessages: () -> Unit) {
                                 val sub = c.description.ifBlank { c.personality }
                                 if (sub.isNotBlank()) Text(sub, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
-                            TextButton(onClick = { formTarget = c; formIsNew = false; showForm = true }) { Text("✏") }
-                            TextButton(onClick = { Bg.run({ Mobilebind.deleteCharacter(c.id) }) { tick++ } }) { Text("🗑") }
+                            TextButton(onClick = { formTarget = c; formIsNew = false; showForm = true }, modifier = Modifier.semantics { contentDescription = "编辑角色 ${c.name}" }) { Text("✏") }
+                            TextButton(onClick = { Bg.run({ Mobilebind.deleteCharacter(c.id) }) { tick++ } }, modifier = Modifier.semantics { contentDescription = "删除角色 ${c.name}" }) { Text("🗑") }
                         }
                     }
                 }

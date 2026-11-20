@@ -14,7 +14,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -31,12 +29,14 @@ import androidx.compose.ui.unit.sp
 import mobilebind.Mobilebind
 import org.json.JSONObject
 
-/** 设置三层：新手（端点）/ 进阶（主题·搜索·语音·原生搜索）/ 开发者（诊断·探测）。 */
+/** 设置三层：新手（端点）/ 进阶（主题·动效·搜索·语音·原生搜索）/ 开发者（诊断·探测）。 */
 @Composable
 fun SettingsTab(
     config: ChatConfig,
     themeMode: ThemeMode,
+    reduceMotion: Boolean,
     onThemeChange: (ThemeMode) -> Unit,
+    onReduceMotionChange: (Boolean) -> Unit,
     onSave: (ChatConfig) -> Unit,
 ) {
     var tier by remember { mutableStateOf(0) }
@@ -49,7 +49,7 @@ fun SettingsTab(
         }
         when (tier) {
             0 -> NoviceSettings(config, onSave)
-            1 -> AdvancedSettings(themeMode, onThemeChange)
+            1 -> AdvancedSettings(themeMode, reduceMotion, onThemeChange, onReduceMotionChange)
             else -> DeveloperSettings(config)
         }
     }
@@ -108,7 +108,12 @@ private fun NoviceSettings(config: ChatConfig, onSave: (ChatConfig) -> Unit) {
 }
 
 @Composable
-private fun AdvancedSettings(themeMode: ThemeMode, onThemeChange: (ThemeMode) -> Unit) {
+private fun AdvancedSettings(
+    themeMode: ThemeMode,
+    reduceMotion: Boolean,
+    onThemeChange: (ThemeMode) -> Unit,
+    onReduceMotionChange: (Boolean) -> Unit,
+) {
     val ctx = LocalContext.current
     var provider by remember { mutableStateOf(Prefs.searchProvider(ctx)) }
     var searxng by remember { mutableStateOf(Prefs.searxngBase(ctx)) }
@@ -123,6 +128,14 @@ private fun AdvancedSettings(themeMode: ThemeMode, onThemeChange: (ThemeMode) ->
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { onThemeChange(ThemeMode.DAY) }, enabled = themeMode != ThemeMode.DAY) { Text("卡其日间") }
             OutlinedButton(onClick = { onThemeChange(ThemeMode.NIGHT) }, enabled = themeMode != ThemeMode.NIGHT) { Text("夜间流星") }
+        }
+
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("减少动态 / 关闭氛围动效", fontWeight = FontWeight.Bold)
+                Text("夜间流星背景静止为静态星空（省电、满足无障碍）", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = reduceMotion, onCheckedChange = onReduceMotionChange)
         }
 
         Text("网页搜索源", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))

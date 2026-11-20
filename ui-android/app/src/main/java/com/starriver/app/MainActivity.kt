@@ -22,14 +22,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
  * 星海容器 · Android 入口。
- * 阶段 B：四栏血肉 —— 消息（会话列表+持久气泡+流式）、联系人（角色卡全字段+导入+头像）、
- * 设置（新手/进阶/开发者三层）、社区（论坛体+MCP 集市）。内核自启见 KernelBoot。
+ * 阶段 B：四栏血肉。阶段 C：夜间流星动效背景（GPU/切后台停/低端降级/可关）+ 主题持久化 + 无障碍。
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,28 +44,39 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Unit) {
+    val ctx = LocalContext.current
     var config by remember { mutableStateOf(initialConfig) }
     var tab by remember { mutableStateOf(0) }
-    var themeMode by remember { mutableStateOf(ThemeMode.DAY) }
+    var themeMode by remember { mutableStateOf(UiPrefs.themeMode(ctx)) }
+    var reduceMotion by remember { mutableStateOf(UiPrefs.reduceMotion(ctx)) }
     val app = remember { AppState() }
     LaunchedEffect(Unit) { app.reload() }
 
     AppTheme(themeMode) {
-        Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                when (tab) {
-                    0 -> MessageTab(config, app) { tab = 3 }
-                    1 -> ContactsTab(config, app) { tab = 0 }
-                    2 -> CommunityTab()
-                    else -> SettingsTab(
-                        config = config,
-                        themeMode = themeMode,
-                        onThemeChange = { themeMode = it },
-                        onSave = { cfg -> config = cfg; persist(cfg) },
-                    )
+        val body: @Composable () -> Unit = {
+            Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    when (tab) {
+                        0 -> MessageTab(config, app) { tab = 3 }
+                        1 -> ContactsTab(config, app) { tab = 0 }
+                        2 -> CommunityTab()
+                        else -> SettingsTab(
+                            config = config,
+                            themeMode = themeMode,
+                            reduceMotion = reduceMotion,
+                            onThemeChange = { themeMode = it; UiPrefs.setThemeMode(ctx, it) },
+                            onReduceMotionChange = { reduceMotion = it; UiPrefs.setReduceMotion(ctx, it) },
+                            onSave = { cfg -> config = cfg; persist(cfg) },
+                        )
+                    }
                 }
+                BottomBar(tab) { tab = it }
             }
-            BottomBar(tab) { tab = it }
+        }
+        if (themeMode == ThemeMode.NIGHT) {
+            StarryBackdrop(reduceMotion = reduceMotion) { body() }
+        } else {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { body() }
         }
     }
 }

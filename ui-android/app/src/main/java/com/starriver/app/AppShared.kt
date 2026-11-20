@@ -161,3 +161,15 @@ object Prefs {
     fun nativeSearch(ctx: Context): Boolean = p(ctx).getBoolean("search.native", true)
     fun setNativeSearch(ctx: Context, v: Boolean) = p(ctx).edit().putBoolean("search.native", v).apply()
 }
+
+/** 主题 / 减少动效 持久化（阶段 C）。追加于 Prefs 之外，独立 object 避免改原闭括号。 */
+object UiPrefs {
+    private const val PREF = "star_river_prefs"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun themeMode(ctx: Context): ThemeMode =
+        if (p(ctx).getInt("ui.theme", 0) == 1) ThemeMode.NIGHT else ThemeMode.DAY
+    fun setThemeMode(ctx: Context, m: ThemeMode) =
+        p(ctx).edit().putInt("ui.theme", if (m == ThemeMode.NIGHT) 1 else 0).apply()
+    fun reduceMotion(ctx: Context): Boolean = p(ctx).getBoolean("ui.reduce_motion", false)
+    fun setReduceMotion(ctx: Context, v: Boolean) = p(ctx).edit().putBoolean("ui.reduce_motion", v).apply()
+}

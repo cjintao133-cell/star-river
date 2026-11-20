@@ -33,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,7 +95,7 @@ private fun SessionRow(s: SessionUi, onOpen: () -> Unit, onDelete: () -> Unit) {
                 Text(s.title.ifBlank { "未命名" }, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(s.model.ifBlank { "—" }, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            TextButton(onClick = onDelete) { Text("🗑", fontSize = 16.sp) }
+            TextButton(onClick = onDelete, modifier = Modifier.semantics { contentDescription = "删除会话 ${s.title}" }) { Text("🗑", fontSize = 16.sp) }
         }
     }
 }
@@ -172,7 +174,7 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String) {
             items(msgs.size) { i -> MessageBubble(msgs[i], config) }
         }
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("🎤", fontSize = 20.sp, modifier = Modifier.clickable { /* STT 接线中（阶段 C） */ })
+            Text("🎤", fontSize = 20.sp, modifier = Modifier.semantics { contentDescription = "语音输入（待接线）" }.clickable { })
             OutlinedTextField(
                 value = input, onValueChange = { input = it },
                 modifier = Modifier.weight(1f), label = { Text("说点什么…") }, maxLines = 4,
