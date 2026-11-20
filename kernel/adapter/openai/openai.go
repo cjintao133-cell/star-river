@@ -89,6 +89,9 @@ type Client struct {
 
 	apiKey string
 	sleep  func(ctx context.Context, d time.Duration) error // 测试注入点
+
+	// extraHeaders 每次请求附带的额外头（应用标识等；不得含密钥、不得覆盖 Authorization）。
+	extraHeaders map[string]string
 }
 
 // New 默认 60s 整体超时。key 只经 Authorization 头，绝不进 URL（红线 3）。
@@ -101,6 +104,29 @@ func New(baseURL, apiKey string) *Client {
 		apiKey:      apiKey,
 		sleep:       sleepCtx,
 	}
+}
+
+// NewWithHeaders 同 New，但每次请求附带 extraHeaders（应用标识/自定义头）。
+// 保留头（Authorization/Content-Type/Accept）不可被覆盖；值不得含密钥（红线3）。
+func NewWithHeaders(baseURL, apiKey string, extraHeaders map[string]string) *Client {
+	c := New(baseURL, apiKey)
+	if len(extraHeaders) > 0 {
+		clean := make(map[string]string, len(extraHeaders))
+		for k, v := range extraHeaders {
+			if k == "" || v == "" {
+				continue
+			}
+			switch strings.ToLower(k) {
+			case "authorization", "content-type", "accept":
+				continue // 保留头禁覆盖
+			}
+			clean[k] = v
+		}
+		if len(clean) > 0 {
+			c.extraHeaders = clean
+		}
+	}
+	return c
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {
@@ -283,6 +309,9 @@ func (c *Client) doOnce(ctx context.Context, method, path, accept string, body [
 	}
 	req.Header.Set("Accept", accept)
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	for k, v := range c.extraHeaders {
+		req.Header.Set(k, v)
+	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, transportError(err, c.apiKey)

@@ -44,7 +44,7 @@ func ChatStream(baseURL, apiKey, model, system, user string, sink ChatSink) {
 		sink.OnError("endpoint/model 未配置")
 		return
 	}
-	c := openai.New(baseURL, apiKey)
+	c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
 	req := openai.ChatRequest{
 		Model:     model,
 		MaxTokens: 1024,

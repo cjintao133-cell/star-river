@@ -67,7 +67,7 @@ func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink)
 		sink.OnError("endpoint/model 未配置")
 		return
 	}
-	c := openai.New(baseURL, apiKey)
+	c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
 	msgs := orchestrator.BuildMinimal(system, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
 	defs, owner, mgr := toolSnapshot()
 	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
