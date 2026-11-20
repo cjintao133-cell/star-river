@@ -47,18 +47,23 @@ fun SafetyScreen(onBack: () -> Unit) {
     var checking by remember { mutableStateOf(false) }
 
     // 看门狗：每 5s 轻量 ping 内核；异常则尝试重开（自愈），不改密钥、不覆盖数据。
+    // single-flight：上一轮未结束不启新一轮，避免重复初始化/并发重建（按 astra 评审 P1）。
+    val inFlight = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
     LaunchedEffect(watchdog) {
         if (!watchdog) { health = "已关闭"; return@LaunchedEffect }
         health = "启动中…"
         while (true) {
-            Bg.run({ try { Mobilebind.version() } catch (t: Throwable) { "ERR:" + (t.message ?: "?") } }) { r ->
-                val t = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-                lastCheck = t
-                if (r.startsWith("ERR")) {
-                    fails += 1; health = "异常·已触发自愈"
-                    KernelBoot.reinit(ctx)
-                } else {
-                    health = "健康"
+            if (inFlight.compareAndSet(false, true)) {
+                Bg.run({ try { Mobilebind.version() } catch (t: Throwable) { "ERR:" + (t.message ?: "?") } }) { r ->
+                    val t = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                    lastCheck = t
+                    if (r.startsWith("ERR")) {
+                        fails += 1; health = "异常·已触发自愈"
+                        KernelBoot.reinit(ctx)
+                    } else {
+                        health = "健康"
+                    }
+                    inFlight.set(false)
                 }
             }
             delay(5000)
@@ -144,7 +149,7 @@ fun SafetyScreen(onBack: () -> Unit) {
             Text("记忆/情绪在伴侣插件（hippocampus / endocrine）内本地演进、可审计、可回滚。",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
             Text("边界（硬约束）：", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            Text("• 不自主修改内核代码 / 不自提权\n• 不越过安全红线与沙盒边界\n• 所有演进仅本地，不外发、可导出审计",
+            Text("• 不自主修改内核代码 / 不自提权\n• 不越过安全红线与沙盒边界\n• 仅写白名单数据字段；派生数据不构成授权；任何开关不得降低安全红线\n• 强制在内核出口（读写/联网/出图）执行，不靠提示词\n• 所有演进仅本地，不外发、可导出审计",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("说明：此处不做「AI 自主改代码」——那类自我进化与安全红线冲突，明确不支持；进化限定在人格/记忆数据层。",
                 fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

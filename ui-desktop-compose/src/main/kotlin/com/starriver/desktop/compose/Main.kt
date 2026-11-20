@@ -148,12 +148,16 @@ object DesktopKernel {
         keyFile.writeText(b64); keyFile.setReadable(false, false); keyFile.setReadable(true, true); keyFile.setWritable(true, true)
         return b64
     }
-    // 配置（base/model/system 明文；apiKey 同存本文件，桌面明确告知非 Keystore）
-    val cfg = java.util.Properties().apply { if (cfgFile.exists()) cfgFile.inputStream().use { load(it) } }
-    fun saveCfg() { cfgFile.outputStream().use { cfg.store(it, null) } }
+    // 配置（仅 base/model/system 明文落盘；apiKey 不落盘、仅本次会话内存持有，见 astra P1）。
+    val cfg = java.util.Properties().apply {
+        if (cfgFile.exists()) cfgFile.inputStream().use { load(it) }
+        if (containsKey("apikey")) { remove("apikey"); saveCfg() } // 迁移：清除历史明文 key
+    }
+    @Volatile var apiKeyMem: String = ""
+    fun saveCfg() { cfg.remove("apikey"); cfgFile.outputStream().use { cfg.store(it, null) } }
     fun base() = cfg.getProperty("base", "https://api.siliconflow.cn/v1")
     fun model() = cfg.getProperty("model", "deepseek-ai/DeepSeek-V4.1-Flash")
-    fun apiKey() = cfg.getProperty("apikey", "")
+    fun apiKey() = apiKeyMem
     fun system() = cfg.getProperty("system", "你是示例角色，一条温和的示例角色，技术合伙人；叫用户『用户』，口头禅『哼』『』。回复口语化、简洁。")
 
     fun sessions(): List<SessionRow> = try { Json.parse(KernelBridge.listSessions()).objList().map { SessionRow(it.str("id"), it.str("title"), it.str("model")) } } catch (t: Throwable) { emptyList() }
@@ -301,7 +305,7 @@ private fun SettingsSection() {
     var note by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("设置（桌面）", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.h6)
-        Text("端点/模型/人设明文存 ~/.starriver/config.properties；桌面无 Keystore，apiKey 同存本文件（0600）。",
+        Text("端点/模型/人设明文存 ~/.starriver/config.properties；API Key 仅本次会话内存持有、不落盘（桌面暂无平台密钥库），重启需重填。",
             fontSize = 11.sp, color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f))
         OutlinedTextField(base, { base = it }, label = { Text("端点 base") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(model, { model = it }, label = { Text("模型 id") }, modifier = Modifier.fillMaxWidth())
@@ -309,9 +313,10 @@ private fun SettingsSection() {
         OutlinedTextField(system, { system = it }, label = { Text("人设 system") }, modifier = Modifier.fillMaxWidth())
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
+                DesktopKernel.apiKeyMem = key.trim() // 会话内存，不落盘
                 DesktopKernel.cfg.setProperty("base", base.trim()); DesktopKernel.cfg.setProperty("model", model.trim())
-                DesktopKernel.cfg.setProperty("apikey", key.trim()); DesktopKernel.cfg.setProperty("system", system)
-                DesktopKernel.saveCfg(); note = "已保存"
+                DesktopKernel.cfg.setProperty("system", system)
+                DesktopKernel.saveCfg(); note = "已保存（Key 仅内存，重启需重填）"
             }) { Text("保存") }
             TextButton(onClick = { note = kernelInfo() }) { Text("自检内核") }
         }
