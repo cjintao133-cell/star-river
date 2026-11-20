@@ -161,5 +161,33 @@ func (p *SelfiePipeline) Submit(ctx context.Context, characterImage []byte, scen
 	return p.svc.SubmitRequest(ctx, req, p.tpl.ID)
 }
 
+// SubmitTextOnly 纯文生图自拍（降级用）：模型不支持垫图(img2img)时，用场景+外貌文字描述生成，
+// 不传 ImageRef（无角色一致性），其余同上。appearance 为空则仅用场景。degraded 标记进 Extra。
+func (p *SelfiePipeline) SubmitTextOnly(ctx context.Context, sceneKey, appearance string) (string, error) {
+	var scene SelfieScene
+	if sceneKey == "" {
+		scene = p.pickScene()
+	} else {
+		s, ok := p.sceneByKey(sceneKey)
+		if !ok {
+			return "", fmt.Errorf("%w: unknown scene %q", ErrRecipe, sceneKey)
+		}
+		scene = s
+	}
+	prompt := strings.ReplaceAll(p.tpl.BasePrompt, "{{scene}}", scene.Prompt)
+	if a := strings.TrimSpace(appearance); a != "" {
+		prompt += "，人物外貌参考：" + a
+	}
+	req := GenerateRequest{
+		Prompt:         prompt,
+		NegativePrompt: p.tpl.NegativePrompt,
+		Model:          p.tpl.Model,
+		Width:          p.tpl.Width,
+		Height:         p.tpl.Height, // 不设 ImageRef → 文生图
+		Extra:          map[string]any{"selfie_scene": scene.Key, "degraded": true},
+	}
+	return p.svc.SubmitRequest(ctx, req, p.tpl.ID)
+}
+
 // Template 暴露模板（只读）。
 func (p *SelfiePipeline) Template() SelfieTemplate { return p.tpl }

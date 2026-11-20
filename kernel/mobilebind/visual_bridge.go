@@ -18,8 +18,11 @@ import (
 )
 
 var (
-	visMu  sync.Mutex
-	visSvc *visual.Service
+	visMu      sync.Mutex
+	visSvc     *visual.Service
+	visModel   string // 已配置的图像模型（能力探测/降级用）
+	visBackend string // 后端名
+	visDialect string // generic 方言
 )
 
 type visualCfgInfo struct {
@@ -101,6 +104,9 @@ func VisualInit(cfgJSON string) string {
 	}
 	visMu.Lock()
 	visSvc = svc
+	visModel = cfg.Model
+	visBackend = backendName
+	visDialect = cfg.Dialect
 	visMu.Unlock()
 	return "OK"
 }
@@ -124,6 +130,23 @@ func VisualStatus() string {
 	return string(b)
 }
 
+// VisualCapabilities 返回当前图像模型能力 {configured,model,backend,dialect,canImage,canImg2Img}。
+func VisualCapabilities() string {
+	visMu.Lock()
+	cfg := visSvc != nil
+	m, be, di := visModel, visBackend, visDialect
+	visMu.Unlock()
+	if !cfg {
+		return `{"configured":false}`
+	}
+	cap := visual.ModelCapability(m)
+	b, _ := json.Marshal(map[string]any{
+		"configured": true, "model": m, "backend": be, "dialect": di,
+		"canImage": cap.CanImage, "canImg2Img": cap.CanImg2Img,
+	})
+	return string(b)
+}
+
 // VisualScenes 返回自拍场景池（key + 提示），供 UI 选择。
 func VisualScenes() string {
 	tpl := visual.DefaultSelfieTemplate()
@@ -135,6 +158,8 @@ func VisualScenes() string {
 type imageResult struct {
 	ImageB64 string `json:"image_b64"`
 	MIME     string `json:"mime"`
+	Degraded bool   `json:"degraded,omitempty"`
+	Note     string `json:"note,omitempty"`
 }
 
 // waitAndFetch 等待任务终态并取第一张（已水印）图。
@@ -201,19 +226,41 @@ func VisualSelfie(characterID, sceneKey string) string {
 	if len(c.PersonaImage) == 0 {
 		return "ERR:该角色未设人设图，自拍需先在角色里上传人设图（人设图即垫图）"
 	}
+	visMu.Lock()
+	model := visModel
+	visMu.Unlock()
+	cap := visual.ModelCapability(model)
+	if !cap.CanImage {
+		return "ERR:当前图像模型不是画图模型（" + model + "），请改用 gemini-*-image / gpt-image-1 / Kolors 等"
+	}
 	pipe, err := visual.NewSelfiePipeline(svc, visual.DefaultSelfieTemplate(), time.Now().UnixNano())
 	if err != nil {
 		return "ERR:" + err.Error()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancel()
-	jobID, err := pipe.Submit(ctx, c.PersonaImage, sceneKey)
+	degraded := false
+	var jobID string
+	if cap.CanImg2Img {
+		jobID, err = pipe.Submit(ctx, c.PersonaImage, sceneKey)
+	} else {
+		appearance := strings.TrimSpace(c.Description)
+		if appearance == "" {
+			appearance = c.Name
+		}
+		jobID, err = pipe.SubmitTextOnly(ctx, sceneKey, appearance)
+		degraded = true
+	}
 	if err != nil {
 		return "ERR:" + err.Error()
 	}
 	res, err := waitAndFetch(ctx, svc, jobID)
 	if err != nil {
 		return "ERR:" + err.Error()
+	}
+	res.Degraded = degraded
+	if degraded {
+		res.Note = "该模型不支持垫图(img2img)，已降级为纯文生图近似，角色一致性可能下降；需要一致请换支持垫图的模型（硅基 Kolors / gpt-image-1 / gemini-*-image）"
 	}
 	b, _ := json.Marshal(res)
 	return string(b)

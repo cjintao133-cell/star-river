@@ -113,7 +113,9 @@ fun AlbumScreen(app: AppState, onBack: () -> Unit) {
                 resultBytes = bytes
                 val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 resultBmp = bmp?.asImageBitmap()
-                status = "生成完成（已带 AI 水印）"
+                status = if (o.optBoolean("degraded", false))
+                    "生成完成（已带 AI 水印）· ⚠ " + o.optString("note", "该模型不支持垫图，已降级纯文生图，角色一致性可能下降")
+                else "生成完成（已带 AI 水印）"
             } catch (t: Throwable) { status = "解析失败：" + (t.message ?: "?") }
         }
     }
