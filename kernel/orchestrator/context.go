@@ -8,6 +8,9 @@ type Limits struct {
 	MaxChars    int // 文本总字符预算（只统计 text / tool_result / tool_use 参数）
 	// MaxPersonaChars persona/system 自身字符上限（<=0 不截断）。防止超大角色卡/记忆注入撑爆请求。
 	MaxPersonaChars int
+	// MaxUserChars 本次用户消息文本字符上限（<=0 不截断）。防止超长用户输入把"不可裁层"顶穿预算。
+	// 设了它后，请求总量的硬上限 ≈ MaxPersonaChars + MaxUserChars + MaxChars，可预测。
+	MaxUserChars int
 }
 
 // msgChars 估算一条消息的文本占用（块文本 + 工具调用参数）。
@@ -27,6 +30,11 @@ func msgChars(m types.Message) int {
 // 返回可直接喂适配器的 []types.Message。不做持久化/摘要/分层配额（完整版 T-M3-03）。
 func BuildMinimal(persona string, history []types.Message, user types.Message, lim Limits) []types.Message {
 	out := make([]types.Message, 0, len(history)+2)
+
+	// 用户消息文本封顶（不可裁层也要有上限，否则超大输入顶穿预算）。
+	if lim.MaxUserChars > 0 {
+		user = truncateUserText(user, lim.MaxUserChars)
+	}
 
 	var personaMsg *types.Message
 	if persona != "" {
@@ -86,6 +94,48 @@ func BuildMinimal(persona string, history []types.Message, user types.Message, l
 
 	out = append(out, user)
 	return out
+}
+
+// truncateUserText 把用户消息的文本块累计截断到 maxChars（保留图片等非文本块），返回副本。
+func truncateUserText(m types.Message, maxChars int) types.Message {
+	if maxChars <= 0 || msgChars(m) <= maxChars {
+		return m
+	}
+	cp := m
+	cp.Blocks = make([]types.ContentBlock, len(m.Blocks))
+	copy(cp.Blocks, m.Blocks)
+	budget := maxChars
+	for i := range cp.Blocks {
+		b := &cp.Blocks[i]
+		if b.Call != nil {
+			// 工具调用参数也计入文本预算：超限截断。
+			if len(b.Call.Arguments) > budget {
+				b.Call.Arguments = string([]byte(b.Call.Arguments)[:clampNonNeg(budget)]) + "…"
+				budget = 0
+			} else {
+				budget -= len(b.Call.Arguments)
+			}
+			continue
+		}
+		if b.Text == "" {
+			continue
+		}
+		r := []rune(b.Text)
+		if len(r) > budget {
+			b.Text = string(r[:clampNonNeg(budget)]) + "…"
+			budget = 0
+		} else {
+			budget -= len(r)
+		}
+	}
+	return cp
+}
+
+func clampNonNeg(n int) int {
+	if n < 0 {
+		return 0
+	}
+	return n
 }
 
 // truncateRunes 按字符（rune）截断，超限时加省略号。

@@ -428,12 +428,21 @@ func usageFrom(w *wireUsage) Usage {
 	return Usage{PromptTokens: w.PromptTokens, CompletionTokens: w.CompletionTokens, TotalTokens: w.TotalTokens}
 }
 
+// 流式总量硬上限（防超长流/事件洪泛/工具参数膨胀刷爆内存；单行另由 scanSSE 限 1MiB）。
+const (
+	maxStreamTextBytes = 8 << 20 // 正文+推理累计字符上限 8MB
+	maxStreamEvents    = 200000  // 流式事件数上限
+	maxToolArgsBytes   = 1 << 20 // 单个工具调用参数累计上限 1MB
+)
+
 // consumeStream 消费 SSE。终止判定（增补⑤）：见过 [DONE] 或 finish_reason
 // 才算成功；EOF 而两者皆无（含空流）判 KindStream 截断失败。
 func (c *Client) consumeStream(r io.Reader, rid string, emit func(types.StreamEvent)) (*ChatResult, error) {
 	res := &ChatResult{RequestID: rid}
 	calls := map[int]*types.ToolCall{}
 	sawFinish := false
+	totalText := 0
+	events := 0
 	done, err := scanSSE(r, c.apiKey, func(ch wireChunk) error {
 		if ch.Model != "" {
 			res.Model = ch.Model
@@ -449,6 +458,11 @@ func (c *Client) consumeStream(r io.Reader, rid string, emit func(types.StreamEv
 			if d.Content != "" {
 				emit(types.StreamEvent{Kind: types.StreamDelta, Text: d.Content})
 			}
+			totalText += len(d.ReasoningContent) + len(d.Content)
+			events++
+			if totalText > maxStreamTextBytes || events > maxStreamEvents {
+				return &APIError{Kind: KindProtocol, RequestID: rid, Message: "stream exceeded size/event limit"}
+			}
 			if len(d.Annotations) > 0 {
 				res.Sources = addSources(res.Sources, d.Annotations)
 			}
@@ -463,6 +477,9 @@ func (c *Client) consumeStream(r io.Reader, rid string, emit func(types.StreamEv
 				}
 				cur.Name += tc.Function.Name
 				cur.Arguments += tc.Function.Arguments
+				if len(cur.Arguments) > maxToolArgsBytes {
+					return &APIError{Kind: KindProtocol, RequestID: rid, Message: "tool call arguments exceeded limit"}
+				}
 			}
 			if choice.FinishReason != "" {
 				sawFinish = true

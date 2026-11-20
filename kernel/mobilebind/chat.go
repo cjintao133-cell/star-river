@@ -48,7 +48,7 @@ func ChatStream(baseURL, apiKey, model, system, user string, sink ChatSink) {
 	req := openai.ChatRequest{
 		Model:     model,
 		MaxTokens: 1024,
-		Messages:  orchestrator.BuildMinimal(system, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000, MaxPersonaChars: 12000}),
+		Messages:  orchestrator.BuildMinimal(system, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000, MaxPersonaChars: 12000, MaxUserChars: 8000}),
 	}
 	res, err := c.Chat(context.Background(), req, func(e types.StreamEvent) {
 		switch e.Kind {
