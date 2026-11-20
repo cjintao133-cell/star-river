@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -74,14 +77,30 @@ private fun SessionList(config: ChatConfig, app: AppState, onSearch: () -> Unit)
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("消息", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            TextButton(onClick = onSearch) { Text("🔍 搜索") }
+            TextButton(onClick = onSearch) {
+                IconSearch(MaterialTheme.colorScheme.primary, 16.dp)
+                Spacer(Modifier.width(4.dp))
+                Text("搜索")
+            }
             Button(onClick = {
                 Bg.run({ (app.newSession("", "新对话", config.model, config.system)?.let { "OK" }) ?: "ERR:create" }) { tick++ }
             }) { Text("＋ " + AppI18n.t("chat.new_session")) }
         }
         if (app.sessions.isEmpty()) {
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("还没有会话，点右上「＋ 新对话」，或去联系人点角色开始", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            Column(
+                Modifier.weight(1f).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                IconChat(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), 96.dp)
+                Spacer(Modifier.height(18.dp))
+                Text("还没有会话", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.height(6.dp))
+                Text("新建一个对话，或去「联系人」点角色开始", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(18.dp))
+                Button(onClick = {
+                    Bg.run({ (app.newSession("", "新对话", config.model, config.system)?.let { "OK" }) ?: "ERR:create" }) { tick++ }
+                }) { Text("＋ 新建对话") }
             }
         } else {
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {

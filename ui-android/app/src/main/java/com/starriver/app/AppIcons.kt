@@ -104,3 +104,29 @@ fun IconTrash(tint: Color, sizeDp: Dp = 20.dp) {
         drawLine(tint, Offset(10 * u, 4 * u), Offset(14 * u, 4 * u), strokeWidth = sw, cap = StrokeCap.Round)
     }
 }
+
+
+@Composable
+fun IconSearch(tint: Color, sizeDp: Dp = 20.dp) {
+    Canvas(Modifier.size(sizeDp)) {
+        val u = size.width / 24f; val sw = 1.9f * u
+        drawCircle(color = tint, radius = 6.5f * u, center = Offset(10.5f * u, 10.5f * u), style = stroke(tint, sw))
+        drawLine(tint, Offset(15.5f * u, 15.5f * u), Offset(20f * u, 20f * u), strokeWidth = sw, cap = StrokeCap.Round)
+    }
+}
+
+@Composable
+fun IconChat(tint: Color, sizeDp: Dp = 22.dp) {
+    Canvas(Modifier.size(sizeDp)) {
+        val u = size.width / 24f; val sw = 1.9f * u
+        // 圆角气泡
+        drawRoundRect(color = tint, topLeft = Offset(4 * u, 5 * u), size = Size(16 * u, 12 * u),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3 * u, 3 * u), style = stroke(tint, sw))
+        // 底部小尾巴
+        drawLine(tint, Offset(8 * u, 17 * u), Offset(7 * u, 20.5f * u), strokeWidth = sw, cap = StrokeCap.Round)
+        drawLine(tint, Offset(7 * u, 20.5f * u), Offset(11 * u, 17 * u), strokeWidth = sw, cap = StrokeCap.Round)
+        // 内部三点
+        val r = 1.1f * u
+        for (cx in listOf(9f, 12f, 15f)) drawCircle(tint, r, Offset(cx * u, 11 * u))
+    }
+}
