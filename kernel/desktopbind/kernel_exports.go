@@ -88,8 +88,8 @@ type accumSink struct {
 	err string
 }
 
-func (a *accumSink) OnDelta(t string)  { a.sb.WriteString(t) }
-func (a *accumSink) OnDone(m string)   {}
+func (a *accumSink) OnDelta(t string)   { a.sb.WriteString(t) }
+func (a *accumSink) OnDone(m string)    {}
 func (a *accumSink) OnError(msg string) { a.err = msg }
 
 // SrChatOnce 同步执行一次对话并返回完整文本（内部走流式累积）。失败返回 "ERR:..."。

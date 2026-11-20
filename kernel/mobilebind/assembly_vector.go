@@ -95,10 +95,10 @@ func ensureVecIxLocked() {
 		return
 	}
 	var save struct {
-		Dim  int               `json:"dim"`
-		Seq  int64             `json:"seq"`
-		Idx  []byte            `json:"idx"`
-		VMem map[int64]string  `json:"vmem"`
+		Dim  int              `json:"dim"`
+		Seq  int64            `json:"seq"`
+		Idx  []byte           `json:"idx"`
+		VMem map[int64]string `json:"vmem"`
 	}
 	if json.Unmarshal([]byte(v), &save) != nil {
 		return

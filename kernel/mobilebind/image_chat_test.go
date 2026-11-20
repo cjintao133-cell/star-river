@@ -16,7 +16,9 @@ func TestChatStreamImageSendsImageBlock(t *testing.T) {
 	var mu sync.Mutex
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
-		mu.Lock(); gotBody = string(b); mu.Unlock()
+		mu.Lock()
+		gotBody = string(b)
+		mu.Unlock()
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Write([]byte("data: {\"id\":\"x\",\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"看到了\"},\"finish_reason\":null}]}\n\n"))
 		w.Write([]byte("data: {\"id\":\"x\",\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n"))
@@ -31,13 +33,20 @@ func TestChatStreamImageSendsImageBlock(t *testing.T) {
 	if s.err != "" {
 		t.Fatalf("err: %s", s.err)
 	}
-	mu.Lock(); body := gotBody; mu.Unlock()
+	mu.Lock()
+	body := gotBody
+	mu.Unlock()
 	if !strings.Contains(body, "image_url") && !strings.Contains(body, "data:image/png;base64,") {
-		t.Fatalf("请求体应含图片块: %s", body[:min(len(body),400)])
+		t.Fatalf("请求体应含图片块: %s", body[:min(len(body), 400)])
 	}
 	if !strings.Contains(body, "这是什么") {
-		t.Fatalf("文本未带上: %s", body[:min(len(body),400)])
+		t.Fatalf("文本未带上: %s", body[:min(len(body), 400)])
 	}
 }
 
-func min(a, b int) int { if a < b { return a }; return b }
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

@@ -15,10 +15,10 @@ import "C"
 
 // CPUFeatures 返回 CPU 特性检测结果（NEON/ASIMD 与 AVX2）。
 func CPUFeatures() (neon, avx2 bool) {
-return C.sr_cpu_has_neon() != 0, C.sr_cpu_has_avx2() != 0
+	return C.sr_cpu_has_neon() != 0, C.sr_cpu_has_avx2() != 0
 }
 
 // AvailMemBytes 返回可用物理内存字节数（近似值）；底层失败时返回 0。
 func AvailMemBytes() uint64 {
-return uint64(C.sr_mem_available_bytes())
+	return uint64(C.sr_mem_available_bytes())
 }

@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	provMu    sync.RWMutex
+	provMu   sync.RWMutex
 	provName = "openai" // 默认 openai 兼容
 )
 
@@ -53,4 +53,3 @@ func buildSender(baseURL, apiKey string) chatSend {
 		return sendWithFailover(ctx, baseURL, apiKey, model, msgs, defs, emit)
 	}
 }
-

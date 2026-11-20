@@ -19,17 +19,17 @@ import "star-river/kernel/mobilebind"
 
 //export SrVersion
 func SrVersion() *C.char {
-return C.CString(mobilebind.Version())
+	return C.CString(mobilebind.Version())
 }
 
 //export SrEcho
 func SrEcho(s *C.char) *C.char {
-return C.CString(mobilebind.Echo(C.GoString(s)))
+	return C.CString(mobilebind.Echo(C.GoString(s)))
 }
 
 //export SrDeviceProfile
 func SrDeviceProfile() *C.char {
-return C.CString(mobilebind.DeviceProfile())
+	return C.CString(mobilebind.DeviceProfile())
 }
 
 func main() {}

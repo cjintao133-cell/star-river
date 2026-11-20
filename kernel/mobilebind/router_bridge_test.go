@@ -41,7 +41,9 @@ func TestFailoverToBackup(t *testing.T) {
 	msgs := []types.Message{{Role: types.RoleUser, Blocks: []types.ContentBlock{{Type: types.BlockText, Text: "hi"}}}}
 	var sb strings.Builder
 	model, err := sendWithFailover(context.Background(), bad.URL, "k", "m", msgs, nil, func(e types.StreamEvent) {
-		if e.Kind == types.StreamDelta { sb.WriteString(e.Text) }
+		if e.Kind == types.StreamDelta {
+			sb.WriteString(e.Text)
+		}
 	})
 	if err != nil {
 		t.Fatalf("应切备用成功: %v", err)

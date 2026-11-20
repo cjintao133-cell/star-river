@@ -30,7 +30,9 @@ func TestProviderRoutingAnthropic(t *testing.T) {
 	var mu sync.Mutex
 	var path string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock(); path = r.URL.Path; mu.Unlock()
+		mu.Lock()
+		path = r.URL.Path
+		mu.Unlock()
 		w.WriteHeader(http.StatusBadRequest) // 触发错误即止，仅验证路径
 		w.Write([]byte(`{"error":{"message":"mock"}}`))
 	}))
@@ -39,7 +41,9 @@ func TestProviderRoutingAnthropic(t *testing.T) {
 	defer SetChatProvider("openai")
 	s := &recSink{}
 	ChatStreamTools(srv.URL, "k", "claude-x", "", "hi", s)
-	mu.Lock(); p := path; mu.Unlock()
+	mu.Lock()
+	p := path
+	mu.Unlock()
 	if !strings.HasSuffix(p, "/messages") {
 		t.Fatalf("anthropic 应打 /messages，实际 %q", p)
 	}
@@ -49,7 +53,9 @@ func TestProviderRoutingGemini(t *testing.T) {
 	var mu sync.Mutex
 	var path string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock(); path = r.URL.Path; mu.Unlock()
+		mu.Lock()
+		path = r.URL.Path
+		mu.Unlock()
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`{"error":{"message":"mock"}}`))
 	}))
@@ -58,7 +64,9 @@ func TestProviderRoutingGemini(t *testing.T) {
 	defer SetChatProvider("openai")
 	s := &recSink{}
 	ChatStreamTools(srv.URL, "k", "gemini-x", "", "hi", s)
-	mu.Lock(); p := path; mu.Unlock()
+	mu.Lock()
+	p := path
+	mu.Unlock()
 	if !strings.Contains(p, "generateContent") && !strings.Contains(p, "streamGenerateContent") {
 		t.Fatalf("gemini 应打 generateContent，实际 %q", p)
 	}

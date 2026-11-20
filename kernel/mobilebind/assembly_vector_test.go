@@ -14,7 +14,9 @@ import (
 
 func mockEmbeddings() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var req struct{ Input string `json:"input"` }
+		var req struct {
+			Input string `json:"input"`
+		}
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		// 简单按关键词给不同向量（dim=4）
 		vec := []float32{0, 0, 0, 1}

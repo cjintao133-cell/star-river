@@ -19,11 +19,15 @@ func TestBackupExportImportRoundtrip(t *testing.T) {
 		_ = json.Unmarshal([]byte(js), &m)
 		sid = m["session_id"]
 	}
-	if sid == "" { t.Fatalf("create session failed") }
+	if sid == "" {
+		t.Fatalf("create session failed")
+	}
 	AppendMessage(sid, "user", "要备份的消息内容")
 
 	arch := BackupExport()
-	if len(arch) == 0 { t.Fatalf("导出为空") }
+	if len(arch) == 0 {
+		t.Fatalf("导出为空")
+	}
 
 	// 模拟换机：新库导入
 	db2 := filepath.Join(t.TempDir(), "bk2.db")
@@ -50,4 +54,3 @@ func TestBackupImportBadArchive(t *testing.T) {
 		t.Fatalf("空归档应报错: %s", r)
 	}
 }
-

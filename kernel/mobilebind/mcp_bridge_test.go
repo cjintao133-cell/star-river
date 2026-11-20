@@ -110,7 +110,9 @@ func TestMcpBridgePersistReload(t *testing.T) {
 		t.Fatalf("add: %s", r)
 	}
 	// 模拟重启：清空内存 Manager 单例（真实重启会丢进程内连接），再 Init 只加载配置
-	mcpMu.Lock(); mcpMgr = nil; mcpMu.Unlock()
+	mcpMu.Lock()
+	mcpMgr = nil
+	mcpMu.Unlock()
 	McpInit(state)
 	s := McpServers()
 	if !strings.Contains(s, "p1") || !strings.Contains(s, "\"connected\":false") {

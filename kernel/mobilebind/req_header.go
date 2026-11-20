@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	reqHdrMu  sync.RWMutex
-	reqHdrs = map[string]string{}
+	reqHdrMu sync.RWMutex
+	reqHdrs  = map[string]string{}
 )
 
 // SetRequestHeaders 设应用额外请求头（JSON 对象 {"k":"v"}）。空串=仅用默认标识头。

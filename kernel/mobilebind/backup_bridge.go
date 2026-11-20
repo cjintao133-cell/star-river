@@ -43,8 +43,12 @@ func BackupImport(data []byte) string {
 	// 数据已替换：重置派生状态，避免旧引擎/索引指向旧库。
 	resetAssembly()
 	resetProactive()
-	tdMu.Lock(); tdIdx = nil; tdMu.Unlock()
-	mcpMu.Lock(); mcpMgr = nil; mcpMu.Unlock()
+	tdMu.Lock()
+	tdIdx = nil
+	tdMu.Unlock()
+	mcpMu.Lock()
+	mcpMgr = nil
+	mcpMu.Unlock()
 	info := map[string]any{"format": res.Manifest.Format, "version": res.Manifest.Version, "extras": len(res.Extras)}
 	b, _ := json.Marshal(info)
 	return "OK:" + string(b)
