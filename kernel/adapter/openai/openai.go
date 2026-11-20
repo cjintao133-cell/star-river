@@ -3,6 +3,7 @@ package openai
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -102,7 +103,7 @@ func retryableKind(k string) bool {
 // wireOutMessage 请求侧消息。reasoning 块不回传端点。
 type wireOutMessage struct {
 	Role       string            `json:"role"`
-	Content    string            `json:"content"`
+	Content    any               `json:"content"`
 	ToolCalls  []wireOutToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string            `json:"tool_call_id,omitempty"`
 }
@@ -116,6 +117,22 @@ type wireOutToolCall struct {
 	} `json:"function"`
 }
 
+// openAIOutPart OpenAI 多模态 content 分片（文本/图片）。
+type openAIOutPart struct {
+	Type     string          `json:"type"`
+	Text     string          `json:"text,omitempty"`
+	ImageURL *openAIImageURL `json:"image_url,omitempty"`
+}
+
+type openAIImageURL struct {
+	URL string `json:"url"`
+}
+
+// dataURI 把图片字节编码为 data URI（OpenAI image_url.url 用）。
+func dataURI(mime string, data []byte) string {
+	return "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+}
+
 // convertMessages 契约类型 → 请求线格式。v1 不支持的块显式报错，不静默丢弃。
 func convertMessages(msgs []types.Message) ([]wireOutMessage, error) {
 	out := make([]wireOutMessage, 0, len(msgs))
@@ -125,12 +142,19 @@ func convertMessages(msgs []types.Message) ([]wireOutMessage, error) {
 		}
 		w := wireOutMessage{Role: string(m.Role)}
 		var text strings.Builder
+		var images []openAIOutPart
 		for j, b := range m.Blocks {
 			switch b.Type {
 			case types.BlockText:
 				text.WriteString(b.Text)
 			case types.BlockReasoning:
 				// 推理过程是端点产物，不回传。
+			case types.BlockImage:
+				// 多模态视觉：图片 → content 数组里的 image_url(data URI)。
+				if b.MIMEType == "" || len(b.Data) == 0 {
+					return nil, &APIError{Kind: KindBadRequest, Message: fmt.Sprintf("messages[%d].blocks[%d]: image missing mime/data", i, j)}
+				}
+				images = append(images, openAIOutPart{Type: "image_url", ImageURL: &openAIImageURL{URL: dataURI(b.MIMEType, b.Data)}})
 			case types.BlockToolUse:
 				if b.Call == nil {
 					return nil, &APIError{Kind: KindBadRequest, Message: fmt.Sprintf("messages[%d].blocks[%d]: tool_use without call", i, j)}
@@ -149,7 +173,17 @@ func convertMessages(msgs []types.Message) ([]wireOutMessage, error) {
 				return nil, &APIError{Kind: KindBadRequest, Message: fmt.Sprintf("messages[%d].blocks[%d]: block type %q unsupported in v1", i, j, b.Type)}
 			}
 		}
-		w.Content = text.String()
+		if len(images) > 0 {
+			// 有图：content 用分片数组（文本段在前，图片随后）。
+			arr := make([]openAIOutPart, 0, len(images)+1)
+			if text.Len() > 0 {
+				arr = append(arr, openAIOutPart{Type: "text", Text: text.String()})
+			}
+			arr = append(arr, images...)
+			w.Content = arr
+		} else {
+			w.Content = text.String()
+		}
 		out = append(out, w)
 	}
 	return out, nil

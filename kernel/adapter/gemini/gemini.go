@@ -3,6 +3,7 @@ package gemini
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -105,6 +106,13 @@ type wireOutPart struct {
 	Text             string            `json:"text,omitempty"`
 	FunctionCall     *wireFunctionCall `json:"functionCall,omitempty"`
 	FunctionResponse *wireFunctionResp `json:"functionResponse,omitempty"`
+	InlineData       *wireInlineData   `json:"inlineData,omitempty"`
+}
+
+// wireInlineData Gemini 内联图片（base64）。
+type wireInlineData struct {
+	MimeType string `json:"mimeType"`
+	Data     string `json:"data"`
 }
 
 type wireFunctionResp struct {
@@ -176,6 +184,11 @@ func convertMessages(msgs []types.Message) (string, []wireOutContent, error) {
 				parts = append(parts, wireOutPart{Text: b.Text})
 			case types.BlockReasoning:
 				// 推理过程是端点产物，不回传。
+			case types.BlockImage:
+				if b.MIMEType == "" || len(b.Data) == 0 {
+					return "", nil, &APIError{Kind: KindBadRequest, Message: fmt.Sprintf("messages[%d].blocks[%d]: image missing mime/data", i, j)}
+				}
+				parts = append(parts, wireOutPart{InlineData: &wireInlineData{MimeType: b.MIMEType, Data: base64.StdEncoding.EncodeToString(b.Data)}})
 			case types.BlockToolUse:
 				if b.Call == nil {
 					return "", nil, &APIError{Kind: KindBadRequest, Message: fmt.Sprintf("messages[%d].blocks[%d]: tool_use without call", i, j)}

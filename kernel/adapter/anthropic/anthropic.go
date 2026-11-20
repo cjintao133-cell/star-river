@@ -3,6 +3,7 @@ package anthropic
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -114,14 +115,22 @@ func retryableKind(k string) bool {
 
 // wireOutBlock 请求侧内容块（按 type 使用可选字段）。
 type wireOutBlock struct {
-	Type      string          `json:"type"`
-	Text      string          `json:"text,omitempty"`
-	ID        string          `json:"id,omitempty"`          // tool_use
-	Name      string          `json:"name,omitempty"`        // tool_use
-	Input     json.RawMessage `json:"input,omitempty"`       // tool_use
-	ToolUseID string          `json:"tool_use_id,omitempty"` // tool_result
-	Content   string          `json:"content,omitempty"`     // tool_result（字符串形态）
-	IsError   bool            `json:"is_error,omitempty"`    // tool_result
+	Type      string           `json:"type"`
+	Text      string           `json:"text,omitempty"`
+	ID        string           `json:"id,omitempty"`          // tool_use
+	Name      string           `json:"name,omitempty"`        // tool_use
+	Input     json.RawMessage  `json:"input,omitempty"`       // tool_use
+	ToolUseID string           `json:"tool_use_id,omitempty"` // tool_result
+	Content   string           `json:"content,omitempty"`     // tool_result（字符串形态）
+	IsError   bool             `json:"is_error,omitempty"`    // tool_result
+	Source    *wireImageSource `json:"source,omitempty"`      // image
+}
+
+// wireImageSource Anthropic 图片源（base64）。
+type wireImageSource struct {
+	Type      string `json:"type"`       // "base64"
+	MediaType string `json:"media_type"` // image/png 等
+	Data      string `json:"data"`       // base64
 }
 
 type wireOutMessage struct {
@@ -168,6 +177,11 @@ func convertMessages(msgs []types.Message) (string, []wireOutMessage, error) {
 				blocks = append(blocks, wireOutBlock{Type: "text", Text: b.Text})
 			case types.BlockReasoning:
 				// 推理过程是端点产物，不回传。
+			case types.BlockImage:
+				if b.MIMEType == "" || len(b.Data) == 0 {
+					return "", nil, &APIError{Kind: KindBadRequest, Message: fmt.Sprintf("messages[%d].blocks[%d]: image missing mime/data", i, j)}
+				}
+				blocks = append(blocks, wireOutBlock{Type: "image", Source: &wireImageSource{Type: "base64", MediaType: b.MIMEType, Data: base64.StdEncoding.EncodeToString(b.Data)}})
 			case types.BlockToolUse:
 				if b.Call == nil {
 					return "", nil, &APIError{Kind: KindBadRequest, Message: fmt.Sprintf("messages[%d].blocks[%d]: tool_use without call", i, j)}

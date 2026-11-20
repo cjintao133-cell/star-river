@@ -221,9 +221,6 @@ func TestChatRequestValidation(t *testing.T) {
 		{"no model", func(r *ChatRequest) { r.Model = "" }},
 		{"zero max_tokens", func(r *ChatRequest) { r.MaxTokens = 0 }},
 		{"no messages", func(r *ChatRequest) { r.Messages = nil }},
-		{"image block", func(r *ChatRequest) {
-			r.Messages[0].Blocks = []types.ContentBlock{{Type: types.BlockImage, MIMEType: "image/png", Data: []byte{1}}}
-		}},
 		{"invalid role", func(r *ChatRequest) { r.Messages[0].Role = types.Role("bogus") }},
 		{"tool_use without call", func(r *ChatRequest) {
 			r.Messages[0].Blocks = []types.ContentBlock{{Type: types.BlockToolUse}}
