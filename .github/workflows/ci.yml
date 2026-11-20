@@ -11,11 +11,21 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
       - name: go vet
         run: go vet ./...
       - name: go build
         run: go build ./...
       - name: go test
         run: go test ./kernel/...
-      - name: open/closed split (redline 2)
+      - name: go test -race (concurrent packages)
+        run: go test -race ./kernel/bus/... ./kernel/orchestrator/... ./kernel/proactive/...
+      - name: layering guard (core must not import capability plugins)
         run: bash scripts/check-open-split.sh
+      - name: govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
+      - name: staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest && staticcheck ./...
+      - name: hello-kernel demo smoke
+        run: go run ./examples/hello-kernel

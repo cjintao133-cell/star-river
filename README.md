@@ -1,5 +1,8 @@
 # Star River Microkernel
 
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8.svg)](go.mod)
+
 > **An embeddable AI-assistant kernel** — Go + C, for Android and Windows.
 > It packages context assembly, memory, emotion, proactivity, tools/MCP, multimodal adapters and encrypted
 > local storage into a kernel you can drop into your own app. **Inference is BYOK** (cloud or local models).
@@ -18,7 +21,20 @@ Star River Microkernel is an **embeddable AI-assistant kernel**: a general core 
 plugin" packs (Ebbinghaus memory / five-dimensional emotion / proactive scheduling). The core stays clean,
 compiles on its own, and is open source; persona and emotional behavior live in plugins, not in the kernel's identity.
 
+## See it work (offline, ~5 seconds, no key)
+
+```sh
+go run ./examples/hello-kernel
+```
+It runs the core loop locally — event bus → memory (forgetting-curve recall) → emotion (5-D state):
+```
+[bus]      received doorbell  topic="kernel.started" source="hello-kernel"
+[memory]   recall   "the user is building a local-first AI kernel"  score=1.53 retention=1.00
+[emotion]  arousal 0.30 -> 0.70   valence 0.00 -> 0.30
+```
+
 ## Architecture
+
 
 ```
         ┌────────────────────────── App layer (UI) ─────────────────────────┐
