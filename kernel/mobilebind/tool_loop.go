@@ -197,8 +197,9 @@ func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink)
 		return
 	}
 	send := buildSender(baseURL, apiKey)
-	msgs := orchestrator.BuildMinimal(system, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
-	runChatLoop(send, apiKey, model, msgs, user, sink)
+	sys := assembleSystem(system, user) // 注入情绪语气 + 相关记忆
+	msgs := orchestrator.BuildMinimal(sys, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
+	runChatLoop(send, apiKey, model, msgs, user, &capSink{inner: sink, user: user})
 }
 
 // ChatStreamImage 多模态：用户消息带一张图（base64）+ 文本，仍走工具循环。
@@ -219,8 +220,9 @@ func ChatStreamImage(baseURL, apiKey, model, system, user, imageB64, imageMIME s
 		um.Blocks = append([]types.ContentBlock{imgBlock}, um.Blocks...)
 	}
 	send := buildSender(baseURL, apiKey)
-	msgs := orchestrator.BuildMinimal(system, nil, um, orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
-	runChatLoop(send, apiKey, model, msgs, user, sink)
+	sys := assembleSystem(system, user)
+	msgs := orchestrator.BuildMinimal(sys, nil, um, orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
+	runChatLoop(send, apiKey, model, msgs, user, &capSink{inner: sink, user: user})
 }
 
 // decodeImage 解 base64 图像（去 data URI 前缀）。空/非法返回 false。
@@ -363,3 +365,14 @@ func runToolCall(ctx context.Context, mgr *tool.Manager, owner map[string]string
 	}
 	return flattenResult(cr), cr.IsError
 }
+
+// capSink 包裹真实 sink：累积正文，结束时记录一轮（记忆编码 + 情绪演化）。
+type capSink struct {
+	inner ChatSink
+	user  string
+	buf   strings.Builder
+}
+
+func (c *capSink) OnDelta(t string) { c.buf.WriteString(t); c.inner.OnDelta(t) }
+func (c *capSink) OnDone(m string)  { observeTurn(c.user, c.buf.String()); c.inner.OnDone(m) }
+func (c *capSink) OnError(e string) { c.inner.OnError(e) }
