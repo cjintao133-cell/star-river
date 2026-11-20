@@ -27,6 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -158,7 +160,23 @@ private fun AdvancedSettings(
     var imgEditPath by remember { mutableStateOf(ImagePrefs.editPath(ctx)) }
     var chatProto by remember { mutableStateOf(ProtoPrefs.provider(ctx)) }
     var proStatus by remember { mutableStateOf(ProactiveUi.status()) }
+    var backupNote by remember { mutableStateOf("") }
     var saved by remember { mutableStateOf("") }
+
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) Bg.run({
+            val data = Mobilebind.backupExport()
+            if (data == null || data.isEmpty()) return@run "ERR:导出为空"
+            try { ctx.contentResolver.openOutputStream(uri)?.use { it.write(data) }; "OK" } catch (e: Exception) { "ERR:" + (e.message ?: "?") }
+        }) { r -> backupNote = if (r == "OK") "已导出备份" else r }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) Bg.run({
+            val data = try { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } } catch (e: Exception) { null }
+            if (data == null) return@run "ERR:读取失败"
+            Mobilebind.backupImport(data)
+        }) { r -> backupNote = if (r.startsWith("OK:")) "已导入备份（重启 App 生效更稳妥）" else r }
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("聊天协议（模型厂商）", fontWeight = FontWeight.Bold)
@@ -264,6 +282,13 @@ private fun AdvancedSettings(
         OutlinedTextField(value = imgKey, onValueChange = { imgKey = it }, label = { Text("画图 API Key（加密存储）") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
         OutlinedTextField(value = imgEditPath, onValueChange = { imgEditPath = it }, label = { Text("图生图路径（默认 /images/edits，可留空）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Text("垫图=人设图；有垫图走图生图端点保角色一致性，无需 ComfyUI。", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Text("数据备份（换机/防丢）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { exportLauncher.launch("star-river-backup.zip") }) { Text("导出备份") }
+            OutlinedButton(onClick = { importLauncher.launch("application/zip") }) { Text("导入备份") }
+        }
+        if (backupNote.isNotEmpty()) Text(backupNote, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Button(onClick = {
             Prefs.setSearchProvider(ctx, provider)
