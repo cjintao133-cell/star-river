@@ -77,6 +77,17 @@ Star River 是一个**纯本地、零上传、BYOK 的双端「赛博生命容�
 ### 5.4 默认配置（已修，确认别回退）
 - `ChatConfig.kt` 的 `DEFAULT_BASE/DEFAULT_MODEL/DEFAULT_SYSTEM` 已**全部置空**（之前被写了硅基端点、假模型 `deepseek-ai/DeepSeek-V4.1-Flash`、以及"示例角色"人设——那些是之前的错误）。保持空，让用户自带。
 
+### 5.6 「人设 system」错位在连接配置里（设计错误，必改）
+- **现象**：设置·新手页（`SettingsTab.kt` 的 `NoviceSettings`）在「端点/API Key/模型 id」下面紧跟一个「人设 system」大输入框。**连接配置 ≠ 人设，不该放一起。**
+- **现状机制**：`ChatConfig.system` 是全局兜底 system；`MessageTab.kt:79` 建"普通新对话"时传 `config.system`；`MessageTab.kt:123` 用 `sessionSystem[sid] ?: config.system`。
+- **角色路径其实是好的**：`ContactsTab.kt:126-128` 点角色 → `buildCharacterSystem(c)` 取**角色自身的 systemPrompt/personality/description** → `newSession(c.id,...,sys)` 存进 `sessionSystem`。角色本来就自带人设（Go 侧 Character 有 `SystemPrompt/Personality/Description` 字段）。
+- **正确目标架构**：
+  1. 连接配置页只保留 **端点 base + API Key + 模型 id**（+provider 可选），**移除「人设 system」**。
+  2. 人设归属**角色**（已在角色卡里，保留）。
+  3. 无角色的"普通新对话"：要么不设 system（用模型默认），要么在**聊天页**给单个会话设人设，**绝不要放回端点/key 配置页**。
+  4. 删掉/改 `ChatConfig.system` 这个"全局人设"的定位（可保留字段做会话级，但不要作为设置页输入）。
+- **注**：`ChatConfig` 默认值已全空（§5.4），别再加任何预设人设。
+
 ### 5.5 空状态 / 视觉节奏
 - `MessageTab` 空态一大片米色死区、仅一行灰字；无插画/无锚点。建议补 Canvas 线性小插画 + 引导 + 主按钮。整体留白/字号层级需要你重排。
 
