@@ -77,7 +77,7 @@ func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink)
 		var roundText strings.Builder
 		var calls []types.ToolCall
 		req := openai.ChatRequest{Model: model, MaxTokens: 1024, Messages: msgs, Tools: defs}
-		res, err := c.Chat(ctx, req, func(e types.StreamEvent) {
+		emitFn := func(e types.StreamEvent) {
 			switch e.Kind {
 			case types.StreamDelta:
 				if e.Text != "" {
@@ -89,7 +89,14 @@ func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink)
 					calls = append(calls, *e.Call)
 				}
 			}
-		})
+		}
+		res, err := c.Chat(ctx, req, emitFn)
+		// 兜底：本模型不支持 tools 参数 → 去掉工具重试一次（后续不再带工具），避免装了插件却把聊天搞崩。
+		if err != nil && len(defs) > 0 && roundText.Len() == 0 && len(calls) == 0 {
+			defs = nil
+			req.Tools = nil
+			res, err = c.Chat(ctx, req, emitFn)
+		}
 		if err != nil {
 			sink.OnError(redactKey(err.Error(), apiKey))
 			return
