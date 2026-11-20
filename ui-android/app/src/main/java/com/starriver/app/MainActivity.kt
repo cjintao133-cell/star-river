@@ -50,8 +50,10 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
     var config by remember { mutableStateOf(initialConfig) }
     var tab by remember { mutableStateOf(0) }
     var theme by remember { mutableStateOf(ThemePrefs.load(ctx)) }
-    var reduceMotion by remember { mutableStateOf(UiPrefs.reduceMotion(ctx)) }
-    var lang by remember { mutableStateOf(LangPrefs.lang(ctx)) }
+    var reduceMotion by remember {
+        mutableStateOf(if (SysPrefs.reduceMotionSet(ctx)) UiPrefs.reduceMotion(ctx) else DeviceAdvice.recommend().suggestReduceMotion)
+    }
+    var lang by remember { mutableStateOf(LocaleHelp.effective(ctx)) }
     AppI18n.load(ctx, lang)
     val app = remember { AppState() }
     LaunchedEffect(Unit) { app.reload() }
@@ -71,8 +73,10 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
                                 reduceMotion = reduceMotion,
                                 lang = lang,
                                 onThemeChange = { theme = it; ThemePrefs.save(ctx, it) },
-                                onReduceMotionChange = { reduceMotion = it; UiPrefs.setReduceMotion(ctx, it) },
-                                onLangChange = { lang = it; LangPrefs.setLang(ctx, it) },
+                                onReduceMotionChange = { reduceMotion = it; UiPrefs.setReduceMotion(ctx, it); SysPrefs.markReduceMotionSet(ctx) },
+                                followSystem = LocaleHelp.followSystem(ctx),
+                                onLangChange = { code -> SysPrefs.setFollowSystem(ctx, false); LangPrefs.setLang(ctx, code); lang = code },
+                                onFollowSystem = { SysPrefs.setFollowSystem(ctx, true); lang = LocaleHelp.systemLang() },
                                 onSave = { cfg -> config = cfg; persist(cfg) },
                             )
                         }

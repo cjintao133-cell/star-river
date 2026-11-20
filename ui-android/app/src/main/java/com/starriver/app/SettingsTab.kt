@@ -45,9 +45,11 @@ fun SettingsTab(
     theme: ThemeConfig,
     reduceMotion: Boolean,
     lang: String,
+    followSystem: Boolean,
     onThemeChange: (ThemeConfig) -> Unit,
     onReduceMotionChange: (Boolean) -> Unit,
     onLangChange: (String) -> Unit,
+    onFollowSystem: () -> Unit,
     onSave: (ChatConfig) -> Unit,
 ) {
     var tier by remember { mutableStateOf(0) }
@@ -60,8 +62,9 @@ fun SettingsTab(
         Text(AppI18n.t("settings.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(AppI18n.t("settings.language"), fontWeight = FontWeight.Bold)
-            OutlinedButton(onClick = { onLangChange("zh") }, enabled = lang != "zh") { Text("中文") }
-            OutlinedButton(onClick = { onLangChange("en") }, enabled = lang != "en") { Text("English") }
+            OutlinedButton(onClick = { onFollowSystem() }, enabled = !followSystem) { Text("跟随系统") }
+            OutlinedButton(onClick = { onLangChange("zh") }, enabled = followSystem || lang != "zh") { Text("中文") }
+            OutlinedButton(onClick = { onLangChange("en") }, enabled = followSystem || lang != "en") { Text("English") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 8.dp)) {
             TierBtn(AppI18n.t("settings.tier.novice"), 0, tier) { tier = it }
@@ -148,6 +151,7 @@ private fun AdvancedSettings(
     var ttsFormat by remember { mutableStateOf(Prefs.ttsFormat(ctx)) }
     var nativeSearch by remember { mutableStateOf(Prefs.nativeSearch(ctx)) }
     var communityBase by remember { mutableStateOf(CommunityPrefs.base(ctx)) }
+    var personalTag by remember { mutableStateOf(SysPrefs.personalTag(ctx)) }
     var saved by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -214,6 +218,11 @@ private fun AdvancedSettings(
             modifier = Modifier.fillMaxWidth(), singleLine = true)
         Text("留空=用内置种子。见 docs/community-ecosystem-contract.md", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
+        Text("应用标识请求头（随请求发给你自配端点）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        OutlinedTextField(value = personalTag, onValueChange = { personalTag = it },
+            label = { Text("X-Star-River-Tag（如 用户；默认头 X-Star-River-Client 恒带）") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true)
+
         Button(onClick = {
             Prefs.setSearchProvider(ctx, provider)
             Prefs.setSearxngBase(ctx, searxng.trim())
@@ -222,6 +231,8 @@ private fun AdvancedSettings(
             Prefs.setTtsFormat(ctx, ttsFormat.trim().ifBlank { "mp3" })
             Prefs.setNativeSearch(ctx, nativeSearch)
             CommunityPrefs.setBase(ctx, communityBase.trim())
+            SysPrefs.setPersonalTag(ctx, personalTag.trim())
+            HeaderHelp.apply(ctx)
             saved = "已保存进阶设置"
         }, modifier = Modifier.padding(top = 8.dp)) { Text("保存进阶设置") }
         if (saved.isNotEmpty()) Text(saved, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)

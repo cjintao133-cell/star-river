@@ -33,6 +33,7 @@ object KernelBoot {
             inited = true
             // MCP 热插拔层：加载已装插件配置；后台重连"启用"的插件（不阻塞启动）。
             try { Mobilebind.mcpInit(ctx.filesDir.absolutePath + "/mcp_servers.json") } catch (t: Throwable) { }
+            try { HeaderHelp.apply(ctx) } catch (t: Throwable) { }
             Thread { try { Mobilebind.mcpRestore() } catch (t: Throwable) { } }.start()
         }
         return r
