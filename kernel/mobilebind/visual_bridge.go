@@ -26,8 +26,9 @@ type visualCfgInfo struct {
 	BaseURL  string            `json:"base_url"`
 	APIKey   string            `json:"api_key"`
 	Model    string            `json:"model"`
-	Backend  string            `json:"backend"`   // "openai-image"(默认) | "comfyui"
-	EditPath string            `json:"edit_path"` // 可选，覆盖默认 /images/edits
+	Backend  string            `json:"backend"`           // "openai-image"(默认) | "comfyui"
+	EditPath string            `json:"edit_path"`         // 可选，覆盖默认 /images/edits
+	Dialect  string            `json:"dialect,omitempty"` // generic 方言: openai|siliconflow|generic
 	Header   map[string]string `json:"header,omitempty"`
 }
 
@@ -58,6 +59,24 @@ func VisualInit(cfgJSON string) string {
 			EditPath: cfg.EditPath,
 			Header:   hdr,
 		}
+	case "generic", "generic-image", "openai-compatible", "compatible":
+		hdr := http.Header{}
+		for k, v := range cfg.Header {
+			hdr.Set(k, v)
+		}
+		d := visual.DialectGeneric()
+		switch strings.ToLower(strings.TrimSpace(cfg.Dialect)) {
+		case "openai":
+			d = visual.DialectOpenAI()
+		case "siliconflow", "sf":
+			d = visual.DialectSiliconFlow()
+		case "", "generic":
+			d = visual.DialectGeneric()
+		}
+		if cfg.EditPath != "" {
+			d.EditPath = cfg.EditPath
+		}
+		backend = &visual.GenericImageBackend{BaseURL: cfg.BaseURL, APIKey: cfg.APIKey, Model: cfg.Model, Header: hdr, Dialect: d}
 	case "siliconflow", "siliconflow-image", "sf":
 		hdr := http.Header{}
 		for k, v := range cfg.Header {

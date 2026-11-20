@@ -31,6 +31,8 @@ import (
 	"star-river/kernel/visual"
 )
 
+var gBackend, gDialect string
+
 func readKey(path string) string {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -126,7 +128,7 @@ func runSelfie(base, key, imgModel string) bool {
 		fmt.Println("[selfie] SetCharacterPersona:", redact(r, key))
 		return false
 	}
-	cfgJSON, _ := json.Marshal(map[string]any{"base_url": base, "api_key": key, "model": imgModel, "backend": "siliconflow"})
+	cfgJSON, _ := json.Marshal(map[string]any{"base_url": base, "api_key": key, "model": imgModel, "backend": gBackend, "dialect": gDialect})
 	if r := mobilebind.VisualInit(string(cfgJSON)); r != "OK" {
 		fmt.Println("[selfie] VisualInit:", redact(r, key))
 		return false
@@ -228,6 +230,15 @@ func makeImageBackend(base, key, model, backendName string) visual.ImageBackend 
 	switch strings.ToLower(strings.TrimSpace(backendName)) {
 	case "siliconflow", "siliconflow-image", "sf":
 		return &visual.SiliconFlowImageBackend{BaseURL: base, APIKey: key, Model: model}
+	case "generic", "generic-image", "compatible":
+		d := visual.DialectGeneric()
+		switch strings.ToLower(strings.TrimSpace(gDialect)) {
+		case "openai":
+			d = visual.DialectOpenAI()
+		case "siliconflow", "sf":
+			d = visual.DialectSiliconFlow()
+		}
+		return &visual.GenericImageBackend{BaseURL: base, APIKey: key, Model: model, Dialect: d}
 	default:
 		return &visual.OpenAIImageBackend{BaseURL: base, APIKey: key, Model: model}
 	}
@@ -351,8 +362,10 @@ func main() {
 	w := flag.Int("w", 768, "生图宽")
 	h := flag.Int("h", 1024, "生图高")
 	prompt := flag.String("prompt", "", "生图提示词（空则用默认示例场景）")
-	backendName := flag.String("backend", "openai-image", "图像后端: openai-image | siliconflow")
+	backendName := flag.String("backend", "openai-image", "图像后端: openai-image | siliconflow | generic")
+	dialect := flag.String("dialect", "", "generic 方言: openai | siliconflow | generic")
 	flag.Parse()
+	gBackend, gDialect = *backendName, *dialect
 
 	key := readKey(*keyfile)
 	if key == "" && *mode != "selftest" {
