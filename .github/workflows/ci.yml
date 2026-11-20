@@ -1,15 +1,21 @@
-# 备用：仓库上线 GitHub 后启用（当前验收走 scripts/ci-local.sh）
 name: ci
 on:
   push:
   pull_request:
 jobs:
-  vet:
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: 'go.mod'
+          cache: true
       - name: go vet
         run: go vet ./...
+      - name: go build
+        run: go build ./...
+      - name: go test
+        run: go test ./kernel/...
+      - name: open/closed split (redline 2)
+        run: bash scripts/check-open-split.sh
