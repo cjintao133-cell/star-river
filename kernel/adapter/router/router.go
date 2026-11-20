@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync/atomic"
 	"time"
 
@@ -78,6 +79,18 @@ type Result struct {
 	Switched bool
 }
 
+// StatsProvider 提供某模型的失败率（供灾备排序/标灰）。T-M3-07 由 store.StatsRepo 适配。
+// known=false 表示无统计（不参与标灰，按原序）。
+type StatsProvider interface {
+	FailureRate(modelID string) (rate float64, known bool)
+}
+
+// StatsProviderFunc 函数适配。
+type StatsProviderFunc func(modelID string) (float64, bool)
+
+// FailureRate 实现 StatsProvider。
+func (f StatsProviderFunc) FailureRate(modelID string) (float64, bool) { return f(modelID) }
+
 // Router 灾备路由器。并发安全：字段构造后只读（version 原子）。
 type Router struct {
 	endpoints   []Endpoint
@@ -86,6 +99,8 @@ type Router struct {
 	topic       string
 	allowHigher bool
 	shouldFail  func(error) bool
+	stats       StatsProvider
+	grayRate    float64 // >0 时启用标灰：失败率超此阈值则该备用跳过
 	now         func() time.Time
 	version     atomic.Int64
 }
@@ -108,6 +123,12 @@ func WithFailoverPredicate(f func(error) bool) Option { return func(r *Router) {
 
 // WithClock 注入时钟（测试用），默认 time.Now。
 func WithClock(f func() time.Time) Option { return func(r *Router) { r.now = f } }
+
+// WithStats 挂模型统计：备用按失败率升序排序（健康优先），失败率 > grayRate 的备用标灰跳过。
+// grayRate<=0 时不标灰，仅排序。主端点始终保留（总会先试主）。
+func WithStats(p StatsProvider, grayRate float64) Option {
+	return func(r *Router) { r.stats = p; r.grayRate = grayRate }
+}
 
 // New 建路由器。endpoints[0] 为主，其余为按序备用；至少一个，且 caller 非空。
 func New(endpoints []Endpoint, caller Caller, opts ...Option) (*Router, error) {
@@ -134,13 +155,48 @@ func New(endpoints []Endpoint, caller Caller, opts ...Option) (*Router, error) {
 // 备用档高于主且未放宽 → 跳过（TierUnknown 不参与比较，一律放行）。
 func (r *Router) attempts() []Endpoint {
 	primary := r.endpoints[0]
-	out := []Endpoint{primary}
+	// 备用：先按档位过滤。
+	var fbs []Endpoint
 	for _, fb := range r.endpoints[1:] {
 		if !r.allowHigher && primary.Tier != TierUnknown && fb.Tier != TierUnknown && fb.Tier > primary.Tier {
 			continue
 		}
-		out = append(out, fb)
+		fbs = append(fbs, fb)
 	}
+	// T-M3-07：按统计做标灰 + 排序（仅当挂了 stats）。
+	if r.stats != nil && len(fbs) > 0 {
+		type scored struct {
+			ep   Endpoint
+			rate float64
+			have bool
+		}
+		ss := make([]scored, 0, len(fbs))
+		for _, fb := range fbs {
+			rate, have := r.stats.FailureRate(fb.Model)
+			// 标灰：有统计且失败率超阈值 → 跳过该备用。
+			if have && r.grayRate > 0 && rate > r.grayRate {
+				continue
+			}
+			ss = append(ss, scored{ep: fb, rate: rate, have: have})
+		}
+		// 稳定排序：有统计的按失败率升序在前；无统计的保持原序排后。
+		sort.SliceStable(ss, func(i, j int) bool {
+			if ss[i].have != ss[j].have {
+				return ss[i].have // 有统计优先
+			}
+			if !ss[i].have {
+				return false
+			}
+			return ss[i].rate < ss[j].rate
+		})
+		fbs = fbs[:0]
+		for _, s := range ss {
+			fbs = append(fbs, s.ep)
+		}
+	}
+	out := make([]Endpoint, 0, 1+len(fbs))
+	out = append(out, primary)
+	out = append(out, fbs...)
 	return out
 }
 

@@ -16,6 +16,7 @@ type migration struct {
 // migrations 迁移注册表，按 version 升序。新增表/列时追加，勿改历史条目。
 // v1：app_meta（应用元数据 KV），T-M2-01 基座验证用。
 // v2：sessions / messages（T-M2-03），messages.content_cipher 存密文 BLOB。
+// v3：model_stats（T-M3-07）每模型请求/成功/失败/延迟/token 本地累计。
 var migrations = []migration{
 	{
 		version: 1,
@@ -49,6 +50,23 @@ var migrations = []migration{
             )`,
 			`CREATE INDEX idx_messages_session_seq ON messages(session_id, seq)`,
 			`CREATE INDEX idx_sessions_updated ON sessions(updated_at)`,
+		},
+	},
+	{
+		version: 3,
+		name:    "model_stats",
+		stmts: []string{
+			`CREATE TABLE model_stats (
+                model_id          TEXT PRIMARY KEY,
+                requests          INTEGER NOT NULL DEFAULT 0,
+                success           INTEGER NOT NULL DEFAULT 0,
+                fail              INTEGER NOT NULL DEFAULT 0,
+                total_latency_ms  INTEGER NOT NULL DEFAULT 0,
+                last_latency_ms   INTEGER NOT NULL DEFAULT 0,
+                prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+                completion_tokens INTEGER NOT NULL DEFAULT 0,
+                updated_at        INTEGER NOT NULL DEFAULT 0
+            )`,
 		},
 	},
 }
