@@ -45,6 +45,8 @@ private data class Post(val title: String, val author: String, val replies: Int,
 
 @Composable
 private fun ForumSection() {
+    var showReport by remember { mutableStateOf(false) }
+    if (showReport) ReportDialog { showReport = false }
     val posts = remember {
         listOf(
             Post("示例角色伴侣上线三天，感觉她真会记仇 ", "用户", 12, "上次说错话，她隔天翻出来戳我…"),
@@ -58,6 +60,7 @@ private fun ForumSection() {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("论坛为占位数据，联网发帖/回复待阶段 C 接入", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                 TextButton(onClick = { }) { Text("＋ 发帖") }
+                TextButton(onClick = { showReport = true }) { Text("⚑ 举报") }
             }
         }
         LazyColumn(Modifier.fillMaxWidth().padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

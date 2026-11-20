@@ -40,6 +40,9 @@ fun SettingsTab(
     onSave: (ChatConfig) -> Unit,
 ) {
     var tier by remember { mutableStateOf(0) }
+    var screen by remember { mutableStateOf(0) }
+    if (screen == 1) { PermissionScreen { screen = 0 }; return }
+    if (screen == 2) { ReportScreen { screen = 0 }; return }
     Column(Modifier.fillMaxSize().padding(12.dp)) {
         Text("设置", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 8.dp)) {
@@ -50,7 +53,7 @@ fun SettingsTab(
         when (tier) {
             0 -> NoviceSettings(config, onSave)
             1 -> AdvancedSettings(themeMode, reduceMotion, onThemeChange, onReduceMotionChange)
-            else -> DeveloperSettings(config)
+            else -> DeveloperSettings(config, onOpenPermission = { screen = 1 }, onOpenReport = { screen = 2 })
         }
     }
 }
@@ -177,10 +180,15 @@ private fun AdvancedSettings(
 }
 
 @Composable
-private fun DeveloperSettings(config: ChatConfig) {
+private fun DeveloperSettings(config: ChatConfig, onOpenPermission: () -> Unit, onOpenReport: () -> Unit) {
     var info by remember { mutableStateOf("") }
     var probe by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("合规 / 系统", fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onOpenPermission) { Text("权限管理") }
+            OutlinedButton(onClick = onOpenReport) { Text("举报与反馈") }
+        }
         Text("内核信息", fontWeight = FontWeight.Bold)
         Button(onClick = {
             Bg.run({ "version=" + Mobilebind.version() + "\n\nDeviceProfile=\n" + Mobilebind.deviceProfile() }) { info = it }
