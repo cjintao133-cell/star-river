@@ -34,7 +34,15 @@ type ChatRequest struct {
 	System       string
 	Messages     []types.Message
 	MaxTokens    int
-	NativeSearch bool // 启用模型原生网页搜索（Anthropic: tools web_search_20250305）
+	NativeSearch bool      // 启用模型原生网页搜索（Anthropic: tools web_search_20250305）
+	Tools        []ToolDef // 客户端工具定义（function calling）
+}
+
+// ToolDef 客户端工具定义。Parameters 为 JSON Schema。
+type ToolDef struct {
+	Name        string
+	Description string
+	Parameters  json.RawMessage
 }
 
 // ChatResult 一次成功调用的元数据。Model 为实际应答模型（中转掉包信号，T-M1-06 标记）。
@@ -292,6 +300,18 @@ func buildBody(req ChatRequest, stream bool) ([]byte, error) {
 	}{Model: req.Model, MaxTokens: req.MaxTokens, System: joinSystem(req.System, sysFromMsgs), Messages: msgs, Stream: stream}
 	if req.NativeSearch {
 		body.Tools = append(body.Tools, map[string]any{"type": "web_search_20250305", "name": "web_search", "max_uses": 5})
+	}
+	for _, td := range req.Tools {
+		if td.Name == "" {
+			continue
+		}
+		params := td.Parameters
+		if len(params) == 0 {
+			params = json.RawMessage(`{"type":"object","properties":{}}`)
+		}
+		body.Tools = append(body.Tools, map[string]any{
+			"name": td.Name, "description": td.Description, "input_schema": params,
+		})
 	}
 	return json.Marshal(body)
 }

@@ -196,9 +196,9 @@ func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink)
 		sink.OnError("endpoint/model 未配置")
 		return
 	}
-	c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
+	send := buildSender(baseURL, apiKey)
 	msgs := orchestrator.BuildMinimal(system, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
-	runChatLoop(c, apiKey, model, msgs, user, sink)
+	runChatLoop(send, apiKey, model, msgs, user, sink)
 }
 
 // ChatStreamImage 多模态：用户消息带一张图（base64）+ 文本，仍走工具循环。
@@ -218,9 +218,9 @@ func ChatStreamImage(baseURL, apiKey, model, system, user, imageB64, imageMIME s
 		imgBlock := types.ContentBlock{Type: types.BlockImage, MIMEType: imageMIME, Data: img}
 		um.Blocks = append([]types.ContentBlock{imgBlock}, um.Blocks...)
 	}
-	c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
+	send := buildSender(baseURL, apiKey)
 	msgs := orchestrator.BuildMinimal(system, nil, um, orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
-	runChatLoop(c, apiKey, model, msgs, user, sink)
+	runChatLoop(send, apiKey, model, msgs, user, sink)
 }
 
 // decodeImage 解 base64 图像（去 data URI 前缀）。空/非法返回 false。
@@ -240,7 +240,7 @@ func decodeImage(b64 string) ([]byte, bool) {
 }
 
 // runChatLoop 执行工具调用循环。sink 收全部正文增量。
-func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, userMsg string, sink ChatSink) {
+func runChatLoop(send chatSend, apiKey, model string, msgs []types.Message, userMsg string, sink ChatSink) {
 	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancel()
 
@@ -258,7 +258,6 @@ func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, u
 	for round := 0; round < toolLoopMaxRounds; round++ {
 		var roundText strings.Builder
 		var calls []types.ToolCall
-		req := openai.ChatRequest{Model: model, MaxTokens: 1024, Messages: msgs, Tools: defs}
 		emitFn := func(e types.StreamEvent) {
 			switch e.Kind {
 			case types.StreamDelta:
@@ -272,19 +271,18 @@ func runChatLoop(c *openai.Client, apiKey, model string, msgs []types.Message, u
 				}
 			}
 		}
-		res, err := c.Chat(ctx, req, emitFn)
+		modelName, err := send(ctx, model, msgs, defs, emitFn)
 		// 兜底：模型不支持 tools → 去掉工具重试一次。
 		if err != nil && len(defs) > 0 && roundText.Len() == 0 && len(calls) == 0 {
 			defs = nil
-			req.Tools = nil
-			res, err = c.Chat(ctx, req, emitFn)
+			modelName, err = send(ctx, model, msgs, nil, emitFn)
 		}
 		if err != nil {
 			sink.OnError(redactKey(err.Error(), apiKey))
 			return
 		}
 		if len(calls) == 0 {
-			sink.OnDone(res.Model)
+			sink.OnDone(modelName)
 			return
 		}
 		asst := types.Message{Role: types.RoleAssistant}

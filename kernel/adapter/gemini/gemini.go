@@ -30,8 +30,16 @@ type ChatRequest struct {
 	Model        string
 	System       string
 	Messages     []types.Message
-	MaxTokens    int  // → generationConfig.maxOutputTokens，Gemini 必填
-	NativeSearch bool // 启用模型原生网页搜索（Gemini: tools googleSearch）
+	MaxTokens    int       // → generationConfig.maxOutputTokens，Gemini 必填
+	NativeSearch bool      // 启用模型原生网页搜索（Gemini: tools googleSearch）
+	Tools        []ToolDef // 客户端工具定义（functionDeclarations）
+}
+
+// ToolDef 客户端工具定义。Parameters 为 JSON Schema。
+type ToolDef struct {
+	Name        string
+	Description string
+	Parameters  json.RawMessage
 }
 
 // ChatResult 一次成功调用的元数据。Model 为请求模型（Gemini 响应不回显 model，
@@ -294,6 +302,22 @@ func buildBody(req ChatRequest) ([]byte, error) {
 	body.GenerationConfig.MaxOutputTokens = req.MaxTokens
 	if req.NativeSearch {
 		body.Tools = append(body.Tools, map[string]any{"googleSearch": map[string]any{}})
+	}
+	if len(req.Tools) > 0 {
+		decls := make([]map[string]any, 0, len(req.Tools))
+		for _, td := range req.Tools {
+			if td.Name == "" {
+				continue
+			}
+			params := td.Parameters
+			if len(params) == 0 {
+				params = json.RawMessage(`{"type":"object","properties":{}}`)
+			}
+			decls = append(decls, map[string]any{"name": td.Name, "description": td.Description, "parameters": params})
+		}
+		if len(decls) > 0 {
+			body.Tools = append(body.Tools, map[string]any{"functionDeclarations": decls})
+		}
 	}
 	if sys := joinSystem(req.System, sysFromMsgs); sys != "" {
 		body.SystemInstruction = &wireContentIn{Parts: []wireOutPart{{Text: sys}}}
