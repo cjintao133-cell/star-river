@@ -1,45 +1,62 @@
-# 星海微内核 · 常见问题（FAQ）
+# Star River Microkernel · FAQ
 
-## Q1：它到底是不是"纯本地"？
-**分层看**：内核、记忆、情绪、主动、存储、密钥——**全在本地设备**；**推理**这一步，把对话上下文发给你配置的模型端点。端点填云端=发云端；填本机 Ollama/LM Studio=全程离线、不出设备。项目本身**没有自有后端、没有遥测**。所以准确说法是"**本地内核 + 自带端点推理**"，而不是"任何数据永不出设备"。
+## Q1: Is it really "pure local"?
+**Layer by layer**: kernel, memory, emotion, proactivity, storage, keys — **all on-device**. **Inference** sends the
+conversation context to the model endpoint you configure. Cloud endpoint → it goes to the cloud; local Ollama/LM Studio
+→ fully offline. The project has **no own backend, no telemetry**. So the accurate phrase is "**local kernel + BYOK
+inference**", not "no data ever leaves the device".
 
-## Q2：能不能完全不联网用？
-**能。** 接本地模型即可：把 `-base` 指向 `http://127.0.0.1:11434/v1`（Ollama）或 LM Studio 本地地址。见 `docs/usage.md` 第 3 节。
+## Q2: Can it run fully offline?
+**Yes.** Attach a local model: point `-base` at `http://127.0.0.1:11434/v1` (Ollama) or a local LM Studio address. See `docs/usage.md` §3.
 
-## Q3：支持哪些模型 / 厂商？
-通过三类适配器：**OpenAI 兼容**、**Anthropic**、**Gemini**。因此凡是 OpenAI 兼容的（含 Ollama、LM Studio、各类中转、vLLM 等）都能用；官方三家也支持。**BYOK**：密钥你自己填。
+## Q3: Which models / providers are supported?
+Three adapters: **OpenAI-compatible**, **Anthropic**, **Gemini**. So anything OpenAI-compatible works (Ollama, LM Studio,
+gateways, vLLM, ...), plus the three official ones. **BYOK**: you supply the key.
 
-## Q4：我的数据会传到哪、会不会上传给你们？
-**不会上传给我们**（本项目没有自有服务器收集数据）。数据只会去**你自己填的那个端点**。崩溃 dump 只写本地、无网络上传能力。详见 `docs/privacy-boundary.md`。
+## Q4: Where does my data go? Is any of it uploaded to you?
+**Not to us** — there is no own server collecting data. Data only goes to **the endpoint you configure**. Crash dumps are
+local-only with no network capability. See `docs/privacy-boundary.md`.
 
-## Q5：密钥怎么存、安全吗？
-- CLI 工具：从文件或环境变量读，**不进命令行/日志**，适配器禁止跟随重定向。
-- 移动/桌面嵌入时：Android 走 Keystore、Windows 走 DPAPI（`kernel/secret`）。
-- ⚠️ 但加密/JNI 等实现**尚未经外部安全评审**（`KNOWN-ISSUES.md` 列了 8 处）。现阶段请勿宣称"生产级/军用级加密"。
+## Q5: How are keys stored / how safe is it?
+- CLI: read from file or env, **not in argv/logs**; adapters don't follow redirects.
+- Embedded mobile/desktop: Android Keystore, Windows DPAPI (`kernel/secret`).
+- ⚠️ But the crypto/JNI implementations are **not yet externally security-reviewed** (`KNOWN-ISSUES.md` lists 8 areas).
+  Don't claim "production/military-grade encryption" yet.
 
-## Q6：有 UI 吗？能直接装上聊吗？
-**当前主树只有内核/框架，没有成品 UI。** UI 是参考实现，已暂时移出主树（WIP），需要时可从 `with-ui` 分支或 `pre-ui-strip` tag 取回（未打磨，含已知交互 bug）。要成品 App 请等 UI 完成或自行基于内核开发。
+## Q6: Is there a UI? Can I just install and chat?
+**The main tree is kernel/framework only — no product UI.** The UI is a reference implementation, moved out of tree (WIP);
+retrieve it from the `with-ui` branch or `pre-ui-strip` tag (unpolished, known interaction bugs). For a finished app, wait
+for the UI or build on the kernel yourself.
 
-## Q7：支持角色卡（人设卡）吗？
-支持。四载体：V1/V2/V3 JSON、chara PNG、charx（zip）、世界书（触发词激活/递归/常驻）。见 `kernel/cards`。
+## Q7: Does it support character cards?
+Yes — four carriers: V1/V2/V3 JSON, chara PNG, charx (zip), world books (keyword activation/recursion/always-on). See `kernel/cards`.
 
-## Q8：它到底是什么品类？和 AIRI / OpenClaw / SillyTavern / Letta 有什么不一样？
-- 品类：**可嵌入的 AI 助手内核（embeddable AI assistant kernel）**——不是 App，是塞进你 App 的底座。
-- 不是 web 容器（AIRI）、不是服务端 agent 平台（OpenClaw）、不是纯聊天前端（SillyTavern）、不是云端记忆层（Mem0/Zep）、也不是跑模型的推理运行时（LiteRT/llama.cpp）。
-- 坐标：**模型之外、App 之内**——上下文装配 + 记忆 + 情绪 + 主动 + 工具/MCP + 多模态 + 加密存储 + 双端桥，推理 BYOK、零后端。
-- 不追 star 数；目标是做这个坐标上可信、可复用的地基。
+## Q8: What category is it? How is it different from AIRI / OpenClaw / SillyTavern / Letta?
+- Category: **an embeddable AI-assistant kernel** — not an app, a base you drop into your app.
+- Not a web container (AIRI), not a server-side agent platform (OpenClaw), not a chat frontend (SillyTavern), not a cloud
+  memory layer (Mem0/Zep), and not an inference runtime that runs models (LiteRT/llama.cpp).
+- Coordinates: **around the model, inside the app** — context assembly + memory + emotion + proactivity + tools/MCP +
+  multimodal + encrypted storage + dual bridges; BYOK inference, zero backend.
+- Not chasing star counts; it aims to be a trustworthy, reusable foundation in that niche.
 
-## Q9：能用于生产吗？
-**这是 v0.1.0-alpha 级别。** 有一批硬化（禁重定向/压测/真机冒烟/govulncheck 零漏洞），但 `KNOWN-ISSUES.md` 明确列出：8 处待外部安全评审、若干红线未完全闭环、真机长稳未验。**请据此评估，勿据此宣称"开箱即用/生产级安全"。**
+## Q9: Can it be used in production?
+**This is v0.1.0-alpha.** There is hardening (redirect-disable / stress tests / real-endpoint smoke / govulncheck clean),
+but `KNOWN-ISSUES.md` lists: 8 areas awaiting external security review, some red lines not fully closed, on-device
+long-run unverified. **Evaluate accordingly; don't claim "turnkey / production-grade secure."**
 
-## Q10：有插件系统吗？
-当前 **main 主线是内核本体，不含插件系统**。（插件契约/示例插件在独立的 `plugin-wip` 分支实验，未并入主线。）主线里可以自己通过 `bus` + `tool` + `Adapter` 接口扩展。
+## Q10: Is there a plugin system?
+The **main line is the kernel itself, without a plugin system**. (A plugin contract/example plugins live on the separate
+`plugin-wip` branch, exploratory, not merged.) On main you can extend via `bus` + `tool` + the `Adapter` interfaces.
 
-## Q11：许可证是什么？
-**整仓 Apache-2.0**，包含全部内核包与记忆/情绪/主动等能力插件包（全部开源）。底座包不 import 能力插件包仅为「分层整洁/可插拔」的工程约束，与许可证无关。
+## Q11: What license?
+**Whole repo Apache-2.0**, including all kernel packages and the memory/emotion/proactivity capability plugins (all open).
+The "core must not import capability plugins" rule is only an engineering **layering** constraint, unrelated to licensing.
 
-## Q12：怎么反馈问题 / 参与？
-发布后以 GitHub Issues / Discussions 为唯一反馈入口（发布流程文档另附）。内核问题请附：`go build ./...`、`go vet ./...` 的结果，以及复现步骤。
+## Q12: How to report / contribute?
+After release, GitHub Issues / Discussions are the single feedback entry (see the release-process doc). For kernel issues,
+attach `go build ./...`, `go vet ./...` output and repro steps.
 
-## Q13：为什么 UI 说没就没、代码量这么大？
-内核把"长期陪伴"需要的地基做厚了（26 个包、~19k 行 Go + C）：多协议接入、加密存储、上下文编排、MCP、角色卡、记忆/情绪/主动、视觉、C 热点。UI 只是其中一层，独立可换。
+## Q13: Why no UI, and why so much code?
+The kernel thickens the foundation "long-term companionship" needs (26 packages, ~19.5k lines Go + C): multi-protocol
+access, encrypted storage, context orchestration, MCP, character cards, memory/emotion/proactivity, vision, C hot paths.
+The UI is just one layer on top and is independently replaceable.

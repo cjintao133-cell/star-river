@@ -1,26 +1,26 @@
-# 星海微内核 · 文档索引
+# Star River Microkernel · Docs Index
 
-面向"要用 / 要评估 / 要发布这个框架"的人，从这里进：
+English (primary) · 简体中文版见对应 `*.zh.md`。
 
-## 核心三件（先读这三个）
-- **[产品说明 product-brief.md](./product-brief.md)** — 定位、是什么/不是什么、诚实的数据边界、与同类坐标。
-- **[功能文档 功能文档.md](./功能文档.md)** — 逐模块真实能力（全部有代码出处）。
-- **[已知问题与解决方案 已知问题与解决方案.md](./已知问题与解决方案.md)** — 使用排障 + 未验证风险 + 解法。
-- **[使用说明 usage.md](./usage.md)** — 环境、构建、跑通、接云端/接本地(离线)、livecheck、角色卡、嵌入 App。
-- **[常见问题 faq.md](./faq.md)** — "到底纯不纯本地"、能不能离线、支持哪些模型、能用于生产吗等。
+## Core four (start here)
+- **[Product overview — product-brief.md](./product-brief.md)** — positioning, what it is / isn't, honest data boundary, comparison. (中文: [product-brief.zh.md](./product-brief.zh.md))
+- **[Features — features.md](./features.md)** — per-module real capabilities, each traceable to code. (中文: [features.zh.md](./features.zh.md))
+- **[Usage — usage.md](./usage.md)** — env, build, run, cloud/local (offline), livecheck, character cards, embedding. (中文: [usage.zh.md](./usage.zh.md))
+- **[FAQ — faq.md](./faq.md)** — "is it pure local", offline, models, production-readiness, plugin, license. (中文: [faq.zh.md](./faq.zh.md))
+- **[Troubleshooting — troubleshooting.md](./troubleshooting.md)** — usage pitfalls + unverified risks + fixes. (中文: [troubleshooting.zh.md](./troubleshooting.zh.md))
 
-## 发布前必读
-- **[../KNOWN-ISSUES.md](../KNOWN-ISSUES.md)** — 待外部安全评审清单、未闭环红线、真机未验项。**评估/发布前请务必阅读，勿宣称生产级安全。**
-- **[../RELEASE.md](../RELEASE.md)** — 发布说明（内容清单、构建、许可）。
-- **[privacy-boundary.md](./privacy-boundary.md)** — 数据边界说明书（本地存什么、什么情况出设备）。
+## Before you evaluate / release
+- **[../KNOWN-ISSUES.md](../KNOWN-ISSUES.md)** — items awaiting external security review, open red lines, on-device-unverified. **Read before release; don't claim production-grade security.**
+- **[../RELEASE.md](../RELEASE.md)** — release notes (contents, build, license).
+- **[privacy-boundary.md](./privacy-boundary.md)** — data boundary statement (what's local, when data leaves).
 
-## 架构与设计
-- **[architecture.md](./architecture.md)** — 包结构、分层、12 条红线、依赖方向。
-- **[platform-capability.md](./platform-capability.md)** — 各平台能力对照。
-- **[search-design.md](./search-design.md)** — 搜索设计。
-- **[secret-storage.md](./secret-storage.md)** — 密钥存储设计。
-- **[licensing.md](./licensing.md)** — 许可（**整仓 Apache-2.0**）与分层依赖约束。
+## Architecture & design
+- **[architecture.md](./architecture.md)** — package structure, layers, red lines, dependency direction.
+- **[platform-capability.md](./platform-capability.md)** — per-platform capability matrix.
+- **[search-design.md](./search-design.md)** — search design.
+- **[secret-storage.md](./secret-storage.md)** — secret storage design.
+- **[licensing.md](./licensing.md)** — license (whole repo Apache-2.0) and layering constraint.
 
-## 生态与接入
-- **[community-ecosystem-contract.md](./community-ecosystem-contract.md)** — 用 Git 仓库当后端的社区接口契约。
-- **[ecosystem-ingestion.md](./ecosystem-ingestion.md)** — 生态接入（把能力导出成 MCP server 等）。
+## Ecosystem & integration
+- **[community-ecosystem-contract.md](./community-ecosystem-contract.md)** — git-repo-as-backend community contract.
+- **[ecosystem-ingestion.md](./ecosystem-ingestion.md)** — ecosystem ingestion (exporting capabilities as MCP servers, etc.).

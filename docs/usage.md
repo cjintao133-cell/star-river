@@ -1,118 +1,111 @@
-# Star River（星河）· 使用说明
+# Star River Microkernel · Usage
 
-本文档只描述**当前主树（内核/框架）真实可用的东西**。UI 已移出主树（见 FAQ）。
+This guide describes only what actually works in the **current main tree (kernel/framework)**. UI is out of tree (see FAQ).
 
-## 0. 环境前置
+## 0. Prerequisites
 
-- **Go**：`go.mod` 要求 **go 1.26.0**（务必用 ≥1.26 的工具链；旧版本会构建失败）。
-- **C 工具链**：`cc`/`gcc`（构建 `native/` 热点模块；不带 native 时可只跑纯 Go 部分）。
-- 可选：`staticcheck`（静态检查，需自行 `go install golang.org/x/tools/cmd/staticcheck`）。
-- Android 构建额外需要：NDK r26+、JDK17、Gradle 8.9（仅在你要出 AAR 时）。
+- **Go**: `go.mod` requires **go 1.26.0** (use a ≥1.26 toolchain; older versions fail to build).
+- **C toolchain**: `cc`/`gcc` (builds `native/` hot paths; the pure-Go part runs without it).
+- Optional: `staticcheck` (`go install honnef.co/go/tools/cmd/staticcheck@latest`).
+- Android builds additionally need NDK r26+, JDK17, Gradle 8.9 (only when producing an AAR).
 
-## 1. 获取与构建
+## 1. Get & build
 
 ```sh
 git clone <repo> star-river && cd star-river
 
-go build ./...          # 编译全仓
-go vet ./...            # 静态检查
-go test ./kernel/...    # 内核单测（并发包建议加 -race）
+go build ./...          # compile everything
+go vet ./...            # static checks
+go test ./kernel/...    # kernel unit tests (add -race for concurrent packages)
 
-# 分层依赖守卫（底座不依赖能力插件包）
+# Layering guard (dependency direction)
 sh scripts/check-open-split.sh
 
-# C 热点模块（可选，生成三平台静态库到 build/native/）
+# C hot paths (optional; produces per-platform static libs under build/native/)
 make -f native/Makefile all vector
 ```
 
-## 2. 跑通最小对话（srchat）
+## 2. Minimal chat (srchat)
 
-`cmd/srchat` 是最小 CLI 聊天闭环（七层上下文最小版 + openai 兼容流式）。**key 只从文件或环境变量读，绝不进命令行/日志。**
+`cmd/srchat` is a minimal CLI chat loop (minimal 7-layer context + OpenAI-compatible streaming). **The key is read only
+from a file or env var — never from argv/logs.**
 
 ```sh
-# 方式 A：云端端点（BYOK，例如任意 OpenAI 兼容中转）
-echo -n "sk-你的key" > /root/myk
+# A) Cloud endpoint (BYOK, any OpenAI-compatible gateway)
+echo -n "sk-yourkey" > /root/myk
 go run ./cmd/srchat \
   -base https://your-host/v1 \
   -model your-model-id \
   -keyfile /root/myk
 
-# 方式 B：环境变量给 key
-SR_API_KEY=sk-你的key go run ./cmd/srchat -base https://your-host/v1 -model your-model-id
+# B) Key via env
+SR_API_KEY=sk-yourkey go run ./cmd/srchat -base https://your-host/v1 -model your-model-id
 ```
 
-参数一览：
+Flags:
 
-| 参数 | 说明 |
+| Flag | Meaning |
 |---|---|
-| `-base` | **必填**。OpenAI 兼容端点 base，形如 `https://host/v1` |
-| `-model` | **必填**。模型 id |
-| `-keyfile` | API key 文件路径（或用环境变量 `SR_API_KEY`） |
-| `-persona` | 可选。人设系统提示 |
-| `-once "你好"` | 单发一条后退出；留空则进入 REPL（`:quit` 退出） |
-| `-maxtokens` | 单次生成上限，默认 1024 |
-| `-maxmsgs` / `-maxchars` | 上下文消息条数 / 字符预算，默认 20 / 8000 |
-| `-timeout` | 单次请求超时，默认 90s |
+| `-base` | **required**; OpenAI-compatible base, e.g. `https://host/v1` |
+| `-model` | **required**; model id |
+| `-keyfile` | API key file path (or env `SR_API_KEY`) |
+| `-persona` | optional system persona prompt |
+| `-once "hi"` | send one message then exit; empty → REPL (`:quit` to exit) |
+| `-maxtokens` | max tokens per generation, default 1024 |
+| `-maxmsgs` / `-maxchars` | context message/char budget, default 20 / 8000 |
+| `-timeout` | per-request timeout, default 90s |
 
-## 3. 完全离线跑（接本地模型）—— 这才是"真·纯本地"
+## 3. Fully offline (local model) — the real "pure local"
 
-Ollama / LM Studio 都提供 **OpenAI 兼容接口**，把 `-base` 指过去即可全程不联网：
+Ollama / LM Studio expose an **OpenAI-compatible API**; point `-base` at them to stay fully offline:
 
 ```sh
-# 以 Ollama 为例（默认监听 127.0.0.1:11434，OpenAI 兼容前缀 /v1）
+# Ollama example (default 127.0.0.1:11434, OpenAI-compatible prefix /v1)
 ollama pull qwen2.5:7b
 
 go run ./cmd/srchat \
   -base http://127.0.0.1:11434/v1 \
   -model qwen2.5:7b \
-  -keyfile /dev/null        # 本地模型通常不校验 key，随便给个空文件即可
+  -keyfile /dev/null        # local models usually don't check the key; any non-empty file works
 ```
 
-> 此时 prompt 只在本机内网/环回地址流动，**不出设备**。这就是本地内核 + 本地推理的"全离线"形态。
+> Now the prompt only travels over loopback/LAN — **never leaves the device**. This is the "local kernel + local inference" form.
 
-## 4. 真机/真实端点冒烟（livecheck）
+## 4. Real-endpoint smoke tests (livecheck)
 
 ```sh
-# 纯本地、免费：验证水印管线
+# Local, free: validates the watermark pipeline
 go run ./cmd/livecheck -mode selftest
 
-# 真实端点：1 次对话（证明 endpoint/key/协议通）
+# Real endpoint: one chat (proves endpoint/key/protocol work)
 go run ./cmd/livecheck -mode chat  -run -base https://host/v1 -model your-model -keyfile /root/myk
 
-# 真实端点：1 次生图 → 强制水印 → 断言 HasAIWatermark
+# Real endpoint: one image gen → mandatory watermark → assert HasAIWatermark
 go run ./cmd/livecheck -mode image -run -base https://host/v1 -model your-model -imgmodel your-image-model -keyfile /root/myk
 ```
 
-## 5. 导入角色卡
+## 5. Import character cards
 
-`kernel/cards` 支持四载体：
+`kernel/cards` supports four carriers: V1/V2/V3 JSON, chara PNG (embedded base64, `ccv3` > `chara`), charx (zip `card.json`
+or any json), and world books (`Constant` + keyword activation, depth cap + loop detection). See `kernel/cards` `Parse` & structs.
 
-- **V2 / V3 JSON**：`spec`/`spec_v2` + `data` 嵌套。
-- **chara PNG**：PNG `tEXt`/`iTXt` chunk 内嵌 base64 卡 JSON（`ccv3` 优先 `chara`）。
-- **charx**：zip 内 `card.json`（或任意 json 兜底）。
-- **世界书**：`Constant` 常驻 + 关键词激活（递归深度上限 + 循环检测）。
+## 6. Embed into your own app (advanced)
 
-（具体 API 见 `kernel/cards` 包的 `Parse` / 结构体。）
+- Android: `gomobile bind` the kernel (`kernel/mobilebind` API) → AAR.
+- Windows/desktop: `go build -buildmode=c-shared` → DLL + JNI bridge (`kernel/desktopbind`).
 
-## 6. 嵌入到你自己 App（进阶）
+## 7. Keys & privacy (red lines)
 
-内核可编译成移动/桌面库，由你写 UI：
+- Key only via `-keyfile` or `SR_API_KEY`; **not in argv/logs** (output scrubbing is a second safety net).
+- Adapters **never follow redirects** (prevents credential leakage across domains).
+- Data destination = the `-base` you set; see `docs/privacy-boundary.md` and `docs/product-brief.md`.
 
-- Android：`gomobile bind` 内核（`kernel/mobilebind` 暴露的 API）→ AAR。
-- Windows/桌面：`go build -buildmode=c-shared` → DLL + JNI 桥（`kernel/desktopbind`）。
+## 8. Common failures
 
-## 7. 密钥与隐私（红线）
-
-- 密钥只经 `-keyfile` 或环境变量 `SR_API_KEY` 输入；**不进 argv、不进日志**（代码内还有输出脱敏双保险）。
-- 适配器统一**禁止跟随重定向**（防凭据跨域外泄）。
-- 数据去向 = 你填的 `-base`；详见 `docs/privacy-boundary.md` 与 `docs/product-brief.md`。
-
-## 8. 常见故障
-
-| 现象 | 原因 / 处理 |
+| Symptom | Cause / fix |
 |---|---|
-| 构建报 go 版本错 | 工具链低于 1.26；升级 Go |
-| 启动报"未提供 key" | 没给 `-keyfile` 也没设 `SR_API_KEY` |
-| 启动报"必须提供 -base 与 -model" | 必填参数缺失 |
-| 连本地模型报错 | `-base` 需带 `/v1`（OpenAI 兼容前缀）；确认 ollama 已启动 |
-| 某些 Gemini 文本模型返回 200 但正文空 | 已知边角，见 `KNOWN-ISSUES.md` |
+| Build fails on Go version | Toolchain < 1.26; upgrade Go |
+| "no key provided" at start | Neither `-keyfile` nor `SR_API_KEY` set |
+| "must provide -base and -model" | A required flag is missing |
+| Local model errors | `-base` must include `/v1`; ensure ollama is running |
+| Some Gemini text models return 200 with empty body | Known edge case, see `KNOWN-ISSUES.md` |

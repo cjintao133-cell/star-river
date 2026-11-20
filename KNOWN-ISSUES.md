@@ -1,38 +1,41 @@
-# 已知问题与限制（发布前必读）
+# Known Issues & Limitations (read before release)
 
-> 本项目定位为**内核 / 框架**。以下如实列出未闭环项，**请据此评估，勿据此宣称「生产级安全/开箱即用」**。
-> UI 已移出主树（参考实现为 WIP），见 README / `with-ui` 分支。
+> This project is positioned as a **kernel / framework**. Below are the **un-closed items**, stated honestly.
+> **Evaluate accordingly; do not claim "production-grade secure / turnkey".** UI is out of tree (reference impl is WIP),
+> see README / the `with-ui` branch.
 
-## 一、安全：待第三方评审（红线7，发布前必修）
-以下涉及加密 / cgo / JNI / 签名，**尚未经外部人工安全评审**。当前实现做了自查加固，但不等于已审计：
-1. `kernel/store/crypto.go` — AES-GCM 字段加密（AAD 绑定可继续版本化加固）。
-2. `kernel/secret/vault_windows.go` — Windows DPAPI 密钥保管（原子创建、ACL 待审）。
-3. `kernel/secret/keybackup.go` — 密钥加密备份。
-4. `kernel/native/vector` cgo — C 侧向量索引（Go 层句柄/维度已加固，C 实现待审）。
-5. `kernel/desktopbind/jnibridge.c` 与 `jnibridge_kernel.c` — 手写 JNI 指针边界。
-6. `svc-dist/manifest.go` + `update.go` — 清单签名（ed25519）与更新，单调版本序号待加固。
-7. `kernel/native/bridge` cgo 段。
-> **在完成外部评审前，请勿对外宣称「军用级/生产级加密」。**
+## 1. Security: awaiting third-party review (red line 7 — must fix before release)
+The following involve crypto / cgo / JNI / signing and have **not** undergone external human security review. They are
+self-hardened, which is not the same as audited:
+1. `kernel/store/crypto.go` — AES-GCM field encryption (AAD-bound to row id; further versioned hardening possible).
+2. `kernel/secret/vault_windows.go` — Windows DPAPI key custody (atomic create; ACL to review).
+3. `kernel/secret/keybackup.go` — encrypted key backup.
+4. `kernel/native/vector` cgo — C-side vector index (Go-side handle/dimension hardened; C impl to review).
+5. `kernel/desktopbind/jnibridge.c` and `jnibridge_kernel.c` — hand-written JNI pointer bounds.
+6. `svc-dist/manifest.go` + `update.go` — manifest signing (ed25519) and updates; monotonic version to harden.
+7. `kernel/native/bridge` cgo section.
+> **Do not claim "military-grade / production-grade encryption" before external review completes.**
 
-## 二、红线相关未完全闭环
-- **红线5「真删除覆盖记忆/向量」**：删除覆盖尚未贯穿到向量/派生数据全链路，属**部分实现**。
-- **红线5「orchestrator 记忆出站分级」**：哪些记忆可随请求出站的分级机制尚未完整落地（当前装配路径未用于线上）。
-- **端点冻结 / HTTPS 强制**：已实现「禁止跟随重定向」（防凭据跨域外泄），但端点构造期冻结/仅 HTTPS 的完整校验仍待补。
+## 2. Red lines not fully closed
+- **Red line 5 "true delete overwrites memory/vectors"**: delete-overwrite not yet threaded through all vector/derived data — **partial**.
+- **Red line 5 "orchestrator memory outbound classification"**: the mechanism deciding which memories may leave with a request is not fully in place (current assembly path not used online).
+- **Endpoint freeze / HTTPS enforcement**: "no following redirects" is implemented (prevents credential leak across domains), but full endpoint-freeze / HTTPS-only validation is still pending.
 
-## 三、真机未验证（需在真实设备/外部服务完成）
-- 后台送达率、长稳（Android 72h / Windows 24h）、三档真机矩阵。
-- 真实 ComfyUI / 图像 API / 自拍的人工效果评审（水印已强制，效果未人工验收）。
-- 发布签名包与渠道物料（当前仅 debug 构建，非发布签名）。
+## 3. On-device unverified (needs real devices / external services)
+- Background delivery rate, long-run stability (Android 72h / Windows 24h), three-tier device matrix.
+- Human review of real ComfyUI / image API / selfie quality (watermark enforced, quality not manually accepted).
+- Release-signed packages and channel assets (current builds are debug, not release-signed).
 
-## 四、参考 UI（已移出主树，WIP）
-Android / 桌面 UI 为**参考实现**，未打磨，存在交互 bug（如「联系人」页点角色会误建多个会话）。UI 不作为发布评估对象；如需可取 `with-ui` 分支。
+## 4. Reference UI (moved out of tree, WIP)
+Android / desktop UI is a **reference implementation**, unpolished, with interaction bugs (e.g. tapping a character in
+"Contacts" creates multiple sessions). UI is not a release-evaluation target; retrieve via the `with-ui` branch.
 
-## 五、功能/数据层面已知小问题
-- **社区「MCP 集市」内置种子示例**：`tavily` 被示例标注为「免 Key」有误——官方远端需鉴权，未填 Key 会 `401`；论坛帖子为内置演示种子，非真实社区。该页偏演示性质。
-- **Gemini 文本流边角**：部分 Gemini 文本模型经 OpenAI 兼容 `/chat/completions` 返回 200 但正文流为空（图像模型路径不受影响，已真机验证）。
-- `cmd/srchat`、`cmd/livecheck`、`cmd/stresssim` 为命令行/调试工具，非产品入口。
+## 5. Functional / data-level known issues
+- **Community "MCP marketplace" built-in seeds**: `tavily` is wrongly labelled "no key" — the official remote requires auth; without a key it `401`s. Forum posts are built-in demo seeds, not a real community. That page is demo-ish.
+- **Gemini text-stream edge case**: some Gemini text models return 200 with an empty body via the OpenAI-compatible `/chat/completions` (image-model path unaffected, verified on real devices).
+- `cmd/srchat`, `cmd/livecheck`, `cmd/stresssim` are CLI/debug tools, not product entry points.
 
-## 六、声明
-- 纯本地、零上传、BYOK：密钥仅经 Keystore/DPAPI，本地加密；向量/记忆不出设备（能力上）。
-- 崩溃 dump 仅写本地、能力上无网络上传。
-- 本项目按 **Apache-2.0** 发布，「按原样」提供，不含任何担保。评测/使用前请阅读本清单。
+## 6. Statement
+- Local kernel + BYOK: keys only via Keystore/DPAPI, encrypted locally; vectors/memory stay on device (capability-wise).
+- Crash dumps written locally only, with no network upload capability.
+- Released under **Apache-2.0**, "as is", without warranty. Read this list before evaluating/using.

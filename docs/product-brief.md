@@ -1,56 +1,62 @@
-# 星海微内核（Star River Microkernel）· 产品说明
+# Star River Microkernel · Product Overview
 
-## 一句话定位
+## One-liner
 
-**可嵌入的 AI 助手内核**：把"让 AI 有连续性、能干活"的地基——**上下文装配、记忆、情绪、主动、工具/MCP、多模态、加密本地存储**——打包成一颗能塞进你自己 App 的内核。
+**An embeddable AI-assistant kernel**: it packages the foundation that gives an AI *continuity and agency* —
+**context assembly, memory, emotion, proactivity, tools/MCP, multimodal adapters, encrypted local storage** —
+into a kernel you can drop into your own app.
 
-> 它**不运行模型权重**，负责"模型之外、App 之内"的那一层；推理这步交给你选的模型端点（云端或本机模型），BYOK，零自有后端。
+> It **does not run model weights**; it owns the layer *around the model, inside your app*. Inference is delegated
+> to the endpoint you choose (cloud or local model), BYOK, no own backend.
 
-## 它是什么
+## What it is
 
-一个 **Go + C** 写的微内核（26 个内核包 + C 热点），把"长期运行、有状态、可插拔"的 AI 助手所需地基做扎实：
+A microkernel written in **Go + C** (26 kernel packages + C hot paths) that does the foundation for a long-running,
+stateful, pluggable AI assistant:
 
-- **上下文引擎**（`orchestrator`）：七层上下文装配 + 预算分配 + 截断前强制记忆沉淀 + 滚动摘要。
-- **模型接入**（`adapter`）：OpenAI 兼容 / Anthropic / Gemini 三协议 + 模型发现/探测/路由，模型无关。
-- **存储**（`store`）：SQLite（纯 Go、零 cgo）+ 字段级 AES-GCM + 版本化迁移。
-- **密钥**（`secret`）：Keystore/DPAPI 保险库 + 加密备份 + 日志脱敏。
-- **工具/MCP**（`tool`/`tooldisc`）：MCP 客户端/管理器（HTTP+stdio、热插拔）+ 内置工具 + 千级工具按需发现。
-- **可插拔能力**：记忆遗忘曲线（`hippocampus`）、五维情绪（`endocrine`）、主动调度（`proactive`）——各成一个包，可拔。
-- **多模态**：视觉（多方言生图+强制水印+降级，`visual`）、语音 STT/TTS（`voice`）、多后端搜索（`search`）。
-- **工程配套**：备份导入导出（`backup`）、本地诊断（`diag`）、合规开关（`compliance`）、多语言（`i18n`）、安全出站（`netx`）。
-- **双端桥**：`mobilebind`（gomobile → Android AAR，71 个导出函数）、`desktopbind`（c-shared DLL + JNI）。
-- **C 热点**：设备探测、int8/NEON 向量检索（`native/`）。
+- **Context engine** (`orchestrator`): 7-layer context assembly + budget allocation + forced memory consolidation before truncation + rolling summary.
+- **Model access** (`adapter`): OpenAI-compatible / Anthropic / Gemini + model discovery/probe/router — model-agnostic.
+- **Storage** (`store`): SQLite (pure Go, no cgo) + field-level AES-GCM + versioned migrations.
+- **Secrets** (`secret`): Keystore/DPAPI vault + encrypted backup + log scrubbing.
+- **Tools/MCP** (`tool`/`tooldisc`): MCP client/manager (HTTP+stdio, hot-pluggable) + built-in tools + on-demand discovery for thousands of tools.
+- **Pluggable capabilities**: Ebbinghaus memory (`hippocampus`), 5-D emotion (`endocrine`), proactivity scheduler (`proactive`) — each a separate, removable package.
+- **Multimodal**: vision (multi-dialect image gen + mandatory watermark + degradation, `visual`), voice STT/TTS (`voice`), multi-backend search (`search`).
+- **Support**: backup import/export (`backup`), local diagnostics (`diag`), compliance switch (`compliance`), i18n (`i18n`), safe outbound HTTP (`netx`).
+- **Dual-end bridges**: `mobilebind` (gomobile → Android AAR, 71 exported functions), `desktopbind` (c-shared DLL + JNI).
+- **C hot paths**: device probe, int8/NEON vector search (`native/`).
 
-## 它不是什么（诚实边界，防误分类）
+## What it is NOT (honest boundaries)
 
-| 别当它是 | 真实区别 |
+| Don't mistake it for | Real difference |
 |---|---|
-| 推理运行时（llama.cpp / LiteRT / RunAnywhere） | 你**不跑模型**，你**编排**模型 |
-| 记忆外挂（Mem0 / Zep） | 你不只是"加装记忆"，是**整套助手大脑** |
-| 有状态 agent 平台（Letta） | 你是**可嵌进 App 的 Go 内核**，不是 Python 服务端 agent |
-| 通用 AI SDK（Vercel/GoAI） | 你不只是调模型，**带状态/记忆/多模态/加密存储/双端桥** |
-| on-device companion SDK（NVIDIA ACE） | 不绑 GPU/游戏引擎，纯 Go+C 跨端 |
+| An inference runtime (llama.cpp / LiteRT / RunAnywhere) | It does **not** run models; it **orchestrates** them |
+| A memory add-on (Mem0 / Zep) | Not just "memory bolted on" — a **full assistant brain** |
+| A stateful agent platform (Letta) | An **embeddable Go kernel**, not a Python server-side agent |
+| A generic AI SDK (Vercel/GoAI) | Not just "call the model" — **state/memory/multimodal/encrypted storage/dual bridges** |
+| An on-device companion SDK (NVIDIA ACE) | No GPU/game-engine lock-in; pure Go+C, cross-platform |
 
-## 诚实的数据边界（务必先读）
+## Honest data boundary (read first)
 
-| 数据 | 在哪 | 出设备吗 |
+| Data | Where | Leaves the device? |
 |---|---|---|
-| 会话/消息、长期记忆、向量索引 | 本地设备（SQLite，正文 AES-GCM 加密） | 不出 |
-| 情绪/主动调度状态、密钥 | 本地（密钥进 Keystore/DPAPI） | 不出 |
-| 崩溃 dump | 本地文件，**无网络上传能力** | 不出 |
-| **对话上下文（prompt）** | 发送到**你自己填的模型端点** | **会**（发给该端点） |
-| **生图 prompt** | 发给你填的图像端点 | **会** |
+| Sessions/messages, long-term memory, vector index | Local device (SQLite, message body AES-GCM encrypted) | No |
+| Emotion/proactivity state, keys | Local (keys in Keystore/DPAPI) | No |
+| Crash dump | Local file, **no network capability** | No |
+| **Conversation context (prompt)** | Sent to **the model endpoint you configure** | **Yes** (to that endpoint) |
+| **Image-gen prompt** | Sent to the image endpoint you configure | **Yes** |
 
-**一句话**：无自有后端、无遥测/埋点；数据只去**你自己配置的端点**。端点填云端=发云端；填本机 Ollama=全程离线。
+**In one line**: no own backend, no telemetry; data only goes to **the endpoint you configure**. Point it at a cloud
+endpoint → data goes there; point it at a local Ollama → fully offline.
 
-## 适用 / 不适用
+## Fit / not a fit
 
-- ✅ 想在自己 App 里嵌入一个**有持续记忆/情绪/主动**的 AI 助手，且要掌控数据与密钥。
-- ✅ 想本地/内网甚至完全离线跑（接本地模型）。
-- ✅ 想拿一个干净的 Go 内核当底座，自己搭 UI / App / 服务。
-- ❌ 想要装上就能聊的成品 App（当前无成品 UI）。
-- ❌ 追求"生产级已审计安全"（见 `KNOWN-ISSUES.md`，8 处待外部安全评审）。
+- ✅ Embed a stateful AI assistant (persistent memory/emotion/proactivity) in your own app, controlling data and keys.
+- ✅ Run local / on-prem, even fully offline (with a local model).
+- ✅ Use a clean Go kernel as a base to build your UI / app / service on.
+- ❌ Want a turnkey chat app (no product UI is included).
+- ❌ Require "production-grade audited security" (see `KNOWN-ISSUES.md`; 8 areas await external security review).
 
-## 规模（可复核）
+## Size (verifiable)
 
-Go 生产 ≈ 19.5k 行 / 139 文件；C/H ≈ 0.9k 行；26 个内核包 + 3 个命令。逐模块能力见 [`功能文档.md`](./功能文档.md)。
+Go production ≈ 19.5k lines / 139 files; C/H ≈ 0.9k lines; 26 kernel packages + 3 commands.
+Per-module capabilities: see [`features.md`](./features.md).
