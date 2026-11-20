@@ -1,0 +1,1 @@
+{"models":[{"name":"models/gemini-1.5-pro","displayName":"Gemini 1.5 Pro","description":"chat model","supportedGenerationMethods":["generateContent","countTokens"]},{"name":"models/text-embedding-004","displayName":"Text Embedding 004","description":"embedding model","supportedGenerationMethods":["embedContent"]}],"nextPageToken":""}

@@ -1,0 +1,1 @@
+{"candidates":[{"content":{"parts":[{"text":"Done."},{"functionCall":{"name":"get_time","args":{}}}],"role":"model"},"finishReason":"STOP","index":0}],"usageMetadata":{"promptTokenCount":11,"candidatesTokenCount":5,"totalTokenCount":16}}
