@@ -54,7 +54,7 @@ func normalizeProvider(p string) string {
 }
 
 // dispatch 用指定协议适配器发起一次流式对话（caller 底层实现）。
-func dispatch(provider, baseURL, apiKey, model string, msgs []types.Message, defs []openai.ToolDef, emit func(types.StreamEvent)) (string, error) {
+func dispatch(ctx context.Context, provider, baseURL, apiKey, model string, msgs []types.Message, defs []openai.ToolDef, emit func(types.StreamEvent)) (string, error) {
 	switch normalizeProvider(provider) {
 	case "anthropic":
 		c := anthropic.New(baseURL, apiKey)
@@ -62,7 +62,7 @@ func dispatch(provider, baseURL, apiKey, model string, msgs []types.Message, def
 		for _, d := range defs {
 			tds = append(tds, anthropic.ToolDef{Name: d.Name, Description: d.Description, Parameters: d.Parameters})
 		}
-		res, err := c.Chat(context.Background(), anthropic.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: tds}, emit)
+		res, err := c.Chat(ctx, anthropic.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: tds}, emit)
 		if err != nil {
 			return "", err
 		}
@@ -73,14 +73,14 @@ func dispatch(provider, baseURL, apiKey, model string, msgs []types.Message, def
 		for _, d := range defs {
 			tds = append(tds, gemini.ToolDef{Name: d.Name, Description: d.Description, Parameters: d.Parameters})
 		}
-		res, err := c.Chat(context.Background(), gemini.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: tds}, emit)
+		res, err := c.Chat(ctx, gemini.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: tds}, emit)
 		if err != nil {
 			return "", err
 		}
 		return res.Model, nil
 	default:
 		c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
-		res, err := c.Chat(context.Background(), openai.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: defs}, emit)
+		res, err := c.Chat(ctx, openai.ChatRequest{Model: model, Messages: msgs, MaxTokens: 1024, Tools: defs}, emit)
 		if err != nil {
 			return "", err
 		}
@@ -95,15 +95,21 @@ func sendWithFailover(ctx context.Context, baseURL, apiKey, model string, msgs [
 	bBase, bKey, bModel, bProv := backupBase, backupKey, backupModel, backupProvider
 	brMu.RUnlock()
 
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if bBase == "" || bModel == "" {
-		return dispatch(primary, baseURL, apiKey, model, msgs, defs, emit)
+		return dispatch(ctx, primary, baseURL, apiKey, model, msgs, defs, emit)
 	}
 	eps := []router.Endpoint{
 		{Name: primary, BaseURL: baseURL, APIKey: apiKey, Model: model, Tier: router.TierUnknown},
 		{Name: bProv, BaseURL: bBase, APIKey: bKey, Model: bModel, Tier: router.TierUnknown},
 	}
 	caller := router.CallerFunc(func(c context.Context, ep router.Endpoint, emit func(types.StreamEvent)) (string, error) {
-		return dispatch(normalizeProvider(ep.Name), ep.BaseURL, ep.APIKey, ep.Model, msgs, defs, emit)
+		if err := c.Err(); err != nil { // 用户取消则不再发往下一端点（避免继续计费）
+			return "", err
+		}
+		return dispatch(c, normalizeProvider(ep.Name), ep.BaseURL, ep.APIKey, ep.Model, msgs, defs, emit)
 	})
 	r, err := router.New(eps, caller, router.WithAllowHigherTier(true), router.WithPublisher(busPublisher()))
 	if err != nil {

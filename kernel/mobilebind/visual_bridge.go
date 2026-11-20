@@ -20,7 +20,6 @@ import (
 var (
 	visMu  sync.Mutex
 	visSvc *visual.Service
-	visCfg visualCfgInfo
 )
 
 type visualCfgInfo struct {
@@ -70,7 +69,6 @@ func VisualInit(cfgJSON string) string {
 	}
 	visMu.Lock()
 	visSvc = svc
-	visCfg = cfg
 	visMu.Unlock()
 	return "OK"
 }

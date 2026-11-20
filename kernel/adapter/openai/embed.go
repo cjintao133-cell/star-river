@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -60,7 +59,7 @@ func (c *Client) Embed(ctx context.Context, model, input string) ([]float32, err
 		return nil, &APIError{Kind: KindProtocol, Message: out.Error.Message}
 	}
 	if len(out.Data) == 0 || len(out.Data[0].Embedding) == 0 {
-		return nil, &APIError{Kind: KindProtocol, Message: fmt.Sprintf("empty embedding")}
+		return nil, &APIError{Kind: KindProtocol, Message: "empty embedding"}
 	}
 	return out.Data[0].Embedding, nil
 }

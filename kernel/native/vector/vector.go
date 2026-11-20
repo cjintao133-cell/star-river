@@ -19,6 +19,7 @@ import "C"
 
 import (
 	"errors"
+	"math"
 	"runtime"
 	"sync"
 	"unsafe"
@@ -48,7 +49,7 @@ type Index struct {
 
 // NewIndex 建索引（dim>0）。
 func NewIndex(dim int) (*Index, error) {
-	if dim <= 0 {
+	if dim <= 0 || dim > math.MaxInt32 {
 		return nil, ErrBadDim
 	}
 	p := C.sr_vec_index_create(C.int(dim))
@@ -130,6 +131,10 @@ func (ix *Index) Search(query []int8, k int) ([]Hit, error) {
 	if k <= 0 {
 		return nil, nil
 	}
+	const maxK = 1024 // 业务检索上限：防止 k 过大导致 C.malloc 巨量分配/分配失败崩进程
+	if k > maxK {
+		k = maxK
+	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.closed {
@@ -146,7 +151,10 @@ func (ix *Index) Search(query []int8, k int) ([]Hit, error) {
 
 	n := int(C.sr_vec_index_search(o.p, (*C.int8_t)(qb), C.int(k),
 		(*C.int64_t)(idsMem), (*C.float)(scoresMem)))
-	if n <= 0 {
+	if n < 0 || n > k {
+		return nil, ErrC // 越界返回视为错误，防止用错误长度构造切片
+	}
+	if n == 0 {
 		return nil, nil
 	}
 	ids := unsafe.Slice((*int64)(idsMem), n)
@@ -172,13 +180,22 @@ func (ix *Index) Serialize() ([]byte, error) {
 		return nil, ErrC
 	}
 	defer C.sr_free(unsafe.Pointer(buf))
+	if ln > math.MaxInt32 {
+		return nil, ErrC // 超出 C.int 可表示范围，避免 GoBytes 负长度崩溃/截断
+	}
+	if ln > 0 && buf == nil {
+		return nil, ErrC
+	}
 	return C.GoBytes(unsafe.Pointer(buf), C.int(ln)), nil
 }
 
 // Deserialize 从字节重建索引（重启加载用）。
 func Deserialize(data []byte) (*Index, error) {
-	if len(data) == 0 {
+	if len(data) < 8 {
 		return nil, ErrC
+	}
+	if d := dimFromSerialized(data); d <= 0 || d > math.MaxInt32 {
+		return nil, ErrC // 头部维度非法，拒绝整块数据交给 C
 	}
 	cb := C.CBytes(data)
 	defer C.free(cb)

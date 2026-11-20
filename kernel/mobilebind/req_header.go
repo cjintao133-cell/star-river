@@ -12,8 +12,7 @@ import (
 
 var (
 	reqHdrMu  sync.RWMutex
-	reqHdrs   = map[string]string{}
-	reqHdrSet bool
+	reqHdrs = map[string]string{}
 )
 
 // SetRequestHeaders 设应用额外请求头（JSON 对象 {"k":"v"}）。空串=仅用默认标识头。
@@ -26,7 +25,6 @@ func SetRequestHeaders(jsonStr string) string {
 	}
 	reqHdrMu.Lock()
 	reqHdrs = m
-	reqHdrSet = true
 	reqHdrMu.Unlock()
 	return "OK"
 }

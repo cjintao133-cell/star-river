@@ -10,9 +10,13 @@ import (
 	"testing"
 
 	"star-river/kernel/endocrine"
+	"star-river/kernel/proactive"
 )
 
 func TestProactiveEmotionFires(t *testing.T) {
+	// 关静默时段，使断言不依赖测试运行时点（生产默认静默 23:00–07:00 保留）。
+	proBaseCfg = proactive.DefaultConfig()
+	proBaseCfg.Quiet.Enabled = false
 	InitKernel(filepath.Join(t.TempDir(), "f.db"), base64.StdEncoding.EncodeToString(make([]byte, 32)))
 	ProactiveSetEnabled(true)
 

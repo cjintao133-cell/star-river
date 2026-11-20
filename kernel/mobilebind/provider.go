@@ -15,8 +15,7 @@ import (
 
 var (
 	provMu    sync.RWMutex
-	provName  = "openai" // 默认 openai 兼容
-	kernelVer = kernelVersion
+	provName = "openai" // 默认 openai 兼容
 )
 
 // SetChatProvider 设置聊天 provider："openai"(默认) | "anthropic" | "gemini"。返回 "OK"/"ERR:..."。

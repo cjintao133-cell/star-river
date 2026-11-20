@@ -23,11 +23,14 @@ var (
 	proNudge []proactive.Nudge // 最近一次 Tick 产生的 nudges（供 UI 拉取）
 )
 
+// proBaseCfg 主动能力基配置（测试可覆盖，如关静默以便确定性断言）。
+var proBaseCfg = proactive.DefaultConfig()
+
 func ensureProactive() *proactive.Scheduler {
 	if proSched != nil {
 		return proSched
 	}
-	cfg := proactive.DefaultConfig()
+	cfg := proBaseCfg
 	cfg.Enabled = false // 出厂默认关（可撤回权限）
 	proSched = proactive.New(cfg, clock.RealClock{}, proactive.MemoryReviewSource{}, proactive.ScheduleSource{Entries: proactive.DefaultScheduleEntries()}, proactive.EmotionSource{Rules: proactive.DefaultEmotionRules()})
 	proSched.SetEmitter(proactive.EmitterFunc(func(proactive.Nudge) {})) // Tick 已返回结果，emitter 空实现
