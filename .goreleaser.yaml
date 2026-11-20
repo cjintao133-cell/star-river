@@ -1,0 +1,28 @@
+version: 2
+
+project_name: star-river
+
+before:
+  hooks:
+    - make -f native/Makefile linux vector-linux
+
+builds:
+  - id: srchat
+    main: ./cmd/srchat
+    binary: srchat
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: git
