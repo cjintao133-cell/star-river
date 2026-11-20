@@ -33,8 +33,9 @@ import org.json.JSONObject
 
 /**
  * T-M4-03 开发者模式三面板：情绪曲线（五维）/ 记忆强度列表 / 七层上下文预览。
- * 数据走 kernel/tool 中性接口（MemorySource/MoodSource）形态；当前为演示数据（界面明确标注），
- * 真实数据待应用装配层注入 hippocampus/endocrine 适配器（红线2）。
+ * 数据由装配层（mobilebind）从 hippocampus/endocrine 真实引擎提供（红线2：底座不 import 插件，入口层注入）。
+ * 引擎尚未装载数据时（demo=true）回退示意并在界面明确标注，不冒充真实。
+ * 末尾并入「受控自我进化」审计面板（EvolutionPanel，真实记忆库/情绪/演进事件审计）。
  */
 @Composable
 fun PanelsScreen(onBack: () -> Unit) {
@@ -49,11 +50,13 @@ fun PanelsScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(12.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← 返回") }
-            Text("开发者三面板", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("开发者面板 · 自我进化", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
         val demo = try { JSONObject(raw).optBoolean("demo", false) } catch (e: Exception) { false }
         if (demo) {
-            Text("⚠ 演示数据：待 hippocampus/endocrine 经中性接口注入真实数据后自动切换", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+            Text("⚠ 演示数据：内核暂无记忆/情绪数据时示意；聊天产生真实记忆后自动切换", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+        } else {
+            Text("✓ 实时数据（hippocampus / endocrine 真实引擎）", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
         }
         Button(onClick = { load() }, enabled = !loading) { Text(if (loading) "读取中…" else "刷新") }
         if (raw.startsWith("ERR:")) { Text(raw, color = MaterialTheme.colorScheme.error); return@Column }
@@ -81,9 +84,12 @@ fun PanelsScreen(onBack: () -> Unit) {
             val mem = o.optJSONArray("memory") ?: JSONArray()
             for (i in 0 until mem.length()) {
                 val m = mem.optJSONObject(i) ?: continue
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(String.format("%.2f", m.optDouble("score", 0.0)), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
-                    Text(m.optString("text"), fontSize = 12.sp)
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(String.format("%.2f", m.optDouble("score", 0.0)), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
+                        Text(m.optString("text"), fontSize = 12.sp)
+                    }
+                    Text("留存 ${String.format("%.2f", m.optDouble("retention", 0.0))} · 重要度 ${String.format("%.2f", m.optDouble("importance", 0.0))}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 32.dp))
                 }
             }
             if (mem.length() == 0) Text("（无记忆命中）", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -102,8 +108,10 @@ fun PanelsScreen(onBack: () -> Unit) {
                 }
                 Text(c.optString("note"), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("合计 ≈ $total token", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+            Text(if (!demo) "合计 ≈ $total token（实时：记忆/情绪为真实引擎口径）" else "合计 ≈ $total token", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
         }
+
+        EvolutionPanel()
     }
 }
 
