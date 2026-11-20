@@ -78,9 +78,9 @@ fun SafetyScreen(onBack: () -> Unit) {
             val dp = try { Mobilebind.deviceProfile() } catch (t: Throwable) { "ERR:" + (t.message ?: "?") }
             val re = KernelBoot.reinit(ctx)
             val sb = StringBuilder()
-            sb.append(if (v.startsWith("ERR")) "❌ 内核版本读取失败\n" else "✓ 内核版本 $v\n")
-            sb.append(if (dp.startsWith("ERR")) "❌ 设备档读取失败\n" else "✓ 设备档可用（NEON/内存探测正常）\n")
-            sb.append(if (re == "OK") "✓ 内核重开成功（未覆盖密钥/数据）\n" else "❌ 内核重开失败：$re\n")
+            sb.append(if (v.startsWith("ERR")) "✗ 内核版本读取失败\n" else "✓ 内核版本 $v\n")
+            sb.append(if (dp.startsWith("ERR")) "✗ 设备档读取失败\n" else "✓ 设备档可用（NEON/内存探测正常）\n")
+            sb.append(if (re == "OK") "✓ 内核重开成功（未覆盖密钥/数据）\n" else "✗ 内核重开失败：$re\n")
             sb.append("✓ 密钥经 Keystore 加密持有（未读取明文）\n")
             sb.append("✓ 打开数据库时执行 schema 版本断言（migrate 拒绝高位/断档）")
             sb.toString()
@@ -94,7 +94,7 @@ fun SafetyScreen(onBack: () -> Unit) {
         }
 
         // 看门狗
-        SectionCard("🐕 看门狗（Watchdog）") {
+        SectionCard("看门狗（Watchdog）") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("内核存活监控", fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -110,7 +110,7 @@ fun SafetyScreen(onBack: () -> Unit) {
         }
 
         // 沙盒隔离
-        SectionCard("📦 沙盒隔离（Sandbox）") {
+        SectionCard("沙盒隔离（Sandbox）") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("工具/MCP 按沙盒隔离执行", fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -125,7 +125,7 @@ fun SafetyScreen(onBack: () -> Unit) {
         }
 
         // 安全红线核对
-        SectionCard("🛡 安全限制（红线核对）") {
+        SectionCard("安全限制（红线核对）") {
             RedlineRow("密钥不进 URL/日志/dump，Keystore 加密", true)
             RedlineRow("底座不 import 闭源插件（红线2）", true)
             RedlineRow("零上传：崩溃 dump 仅本地，能力上无网络", true)
@@ -135,7 +135,7 @@ fun SafetyScreen(onBack: () -> Unit) {
         }
 
         // 自我修复
-        SectionCard("🔧 自我修复（Self-Repair）") {
+        SectionCard("自我修复（Self-Repair）") {
             Text("自检内核连通、设备探测、数据库可重开；发现损坏进恢复态，绝不自动覆盖密钥/数据。",
                 fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick = { runSelfCheck() }, enabled = !checking, modifier = Modifier.fillMaxWidth()) {
@@ -145,7 +145,7 @@ fun SafetyScreen(onBack: () -> Unit) {
         }
 
         // 受控自我进化
-        SectionCard("🧬 自我进化（受控）") {
+        SectionCard("自我进化（受控）") {
             Text("记忆/情绪在伴侣插件（hippocampus / endocrine）内本地演进、可审计、可回滚。",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
             Text("边界（硬约束）：", fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))

@@ -75,7 +75,7 @@ private fun ForumSection(tick: Int) {
             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (offline) "离线种子（社区源未配置/不可达，设置‑进阶 可填源）" else "已连社区源",
                     fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                TextButton(onClick = { showReport = true }) { Text("⚑ 举报") }
+                TextButton(onClick = { showReport = true }) { Text("举报") }
             }
         }
         (posts ?: emptyList()).forEach { p ->
@@ -83,7 +83,7 @@ private fun ForumSection(tick: Int) {
                 Column(Modifier.padding(12.dp)) {
                     Text(p.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     if (p.body.isNotBlank()) Text(p.body, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                    Text("${p.author} · 💬 ${p.replies}" + if (p.tags.isNotEmpty()) " · " + p.tags.joinToString("/") else "", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+                    Text("${p.author} · ${p.replies} 回复" + if (p.tags.isNotEmpty()) " · " + p.tags.joinToString("/") else "", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
@@ -204,7 +204,7 @@ private fun MarketSection(tick: Int, onChanged: () -> Unit) {
                         )
                     }
                     Switch(checked = s.enabled, onCheckedChange = { v -> Bg.run({ Mobilebind.mcpSetEnabled(s.name, v) }) { onChanged() } })
-                    TextButton(onClick = { Bg.run({ Mobilebind.mcpRemoveServer(s.name) }) { onChanged() } }) { Text("🗑") }
+                    TextButton(onClick = { Bg.run({ Mobilebind.mcpRemoveServer(s.name) }) { onChanged() } }) { Text("删除") }
                 }
             }
         }

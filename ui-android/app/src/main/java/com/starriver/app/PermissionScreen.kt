@@ -120,7 +120,7 @@ fun ReportScreen(onBack: () -> Unit) {
         Button(onClick = { if (reason.isNotBlank()) done = true }, enabled = reason.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
             Text("提交举报")
         }
-        if (done) Text("✅ 已记录举报：$reason（本地）", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
+        if (done) Text("已记录举报：$reason（本地）", color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
     }
 }
 

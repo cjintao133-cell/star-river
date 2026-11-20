@@ -54,7 +54,7 @@ fun PanelsScreen(onBack: () -> Unit) {
         }
         val demo = try { JSONObject(raw).optBoolean("demo", false) } catch (e: Exception) { false }
         if (demo) {
-            Text("⚠ 演示数据：内核暂无记忆/情绪数据时示意；聊天产生真实记忆后自动切换", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+            Text("演示数据：内核暂无记忆/情绪数据时示意；聊天产生真实记忆后自动切换", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
         } else {
             Text("✓ 实时数据（hippocampus / endocrine 真实引擎）", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
         }

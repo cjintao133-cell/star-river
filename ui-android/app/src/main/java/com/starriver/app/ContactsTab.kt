@@ -137,8 +137,8 @@ fun ContactsTab(config: ChatConfig, app: AppState, onOpenMessages: () -> Unit) {
                                 val sub = c.description.ifBlank { c.personality }
                                 if (sub.isNotBlank()) Text(sub, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
-                            TextButton(onClick = { formTarget = c; formIsNew = false; showForm = true }, modifier = Modifier.semantics { contentDescription = "编辑角色 ${c.name}" }) { Text("✏") }
-                            TextButton(onClick = { Bg.run({ Mobilebind.deleteCharacter(c.id) }) { tick++ } }, modifier = Modifier.semantics { contentDescription = "删除角色 ${c.name}" }) { Text("🗑") }
+                            TextButton(onClick = { formTarget = c; formIsNew = false; showForm = true }, modifier = Modifier.semantics { contentDescription = "编辑角色 ${c.name}" }) { Text("编辑") }
+                            TextButton(onClick = { Bg.run({ Mobilebind.deleteCharacter(c.id) }) { tick++ } }, modifier = Modifier.semantics { contentDescription = "删除角色 ${c.name}" }) { Text("删除") }
                         }
                     }
                 }

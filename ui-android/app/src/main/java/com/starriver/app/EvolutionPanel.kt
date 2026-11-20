@@ -49,7 +49,7 @@ fun EvolutionPanel() {
 
     Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(LocalCornerRadius.current)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("🧬 自我进化（受控 · 审计）", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("自我进化（受控 · 审计）", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             if (raw.startsWith("ERR:")) {
                 Text(raw, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
             } else {

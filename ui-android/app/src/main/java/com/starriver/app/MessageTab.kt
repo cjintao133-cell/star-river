@@ -124,7 +124,7 @@ private fun SessionRow(s: SessionUi, onOpen: () -> Unit, onDelete: () -> Unit) {
                 Text(s.title.ifBlank { "未命名" }, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(s.model.ifBlank { "—" }, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            TextButton(onClick = onDelete, modifier = Modifier.semantics { contentDescription = "删除会话 ${s.title}" }) { Text("🗑", fontSize = 16.sp) }
+            TextButton(onClick = onDelete, modifier = Modifier.semantics { contentDescription = "删除会话 ${s.title}" }) { IconTrash(MaterialTheme.colorScheme.onSurfaceVariant, 18.dp) }
         }
     }
 }
@@ -287,7 +287,7 @@ private fun MessageBubble(m: MsgUi, config: ChatConfig) {
                 Text(shown, color = textColor)
                 if (!isUser && !m.streaming && m.text.isNotBlank()) {
                     Text(
-                        "🔊 朗读", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary,
+                        "朗读", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 4.dp).clickable { speak(ctx, config, m.text) },
                     )
                 }
