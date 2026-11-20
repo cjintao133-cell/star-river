@@ -24,16 +24,24 @@ import (
 var ErrClosed = errors.New("store: closed")
 
 // writeOp 一次写请求（经 writer goroutine 串行执行）。
-type writeOp struct {
-	ctx   context.Context
+type stmt struct {
 	query string
 	args  []any
-	resp  chan writeResult
+}
+
+type writeOp struct {
+	ctx         context.Context
+	query       string
+	args        []any
+	batch       []stmt // 非 nil 时按事务批量执行（在唯一写者内串行，保证原子）
+	wantFirstID bool   // 批量时返回第一条语句的 LastInsertId
+	resp        chan writeResult
 }
 
 type writeResult struct {
-	res sql.Result
-	err error
+	res    sql.Result
+	err    error
+	lastID int64
 }
 
 // Store SQLite 存储。并发安全；写串行、读并发。
@@ -96,8 +104,7 @@ func (s *Store) writer() {
 	for {
 		select {
 		case op := <-s.ops:
-			res, err := s.db.ExecContext(op.ctx, op.query, op.args...)
-			op.resp <- writeResult{res: res, err: err}
+			op.resp <- s.runOp(op)
 		case <-s.quit:
 			for {
 				select {
@@ -109,6 +116,33 @@ func (s *Store) writer() {
 			}
 		}
 	}
+}
+
+// runOp 在唯一写者内执行一次 op：批量=事务原子执行，单条=直接 Exec。
+func (s *Store) runOp(op writeOp) writeResult {
+	if op.batch == nil {
+		res, err := s.db.ExecContext(op.ctx, op.query, op.args...)
+		return writeResult{res: res, err: err}
+	}
+	tx, err := s.db.BeginTx(op.ctx, nil)
+	if err != nil {
+		return writeResult{err: err}
+	}
+	var lastID int64
+	for i, st := range op.batch {
+		res, e := tx.ExecContext(op.ctx, st.query, st.args...)
+		if e != nil {
+			_ = tx.Rollback()
+			return writeResult{err: e}
+		}
+		if i == 0 && op.wantFirstID {
+			lastID, _ = res.LastInsertId()
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return writeResult{err: err}
+	}
+	return writeResult{lastID: lastID}
 }
 
 // Exec 经单写 goroutine 串行执行一条写语句。
@@ -129,6 +163,27 @@ func (s *Store) Exec(ctx context.Context, query string, args ...any) (sql.Result
 			return r.res, r.err
 		default:
 			return nil, ErrClosed
+		}
+	}
+}
+
+// execTx 在单写 goroutine 内以事务执行多条写语句（原子，串行于其它写）。返回第一条语句的 LastInsertId。
+func (s *Store) execTx(ctx context.Context, stmts []stmt) (int64, error) {
+	op := writeOp{ctx: ctx, batch: stmts, wantFirstID: true, resp: make(chan writeResult, 1)}
+	select {
+	case s.ops <- op:
+	case <-s.quit:
+		return 0, ErrClosed
+	}
+	select {
+	case r := <-op.resp:
+		return r.lastID, r.err
+	case <-s.quit:
+		select {
+		case r := <-op.resp:
+			return r.lastID, r.err
+		default:
+			return 0, ErrClosed
 		}
 	}
 }

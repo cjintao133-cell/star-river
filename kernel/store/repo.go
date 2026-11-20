@@ -173,15 +173,14 @@ func (r *Repo) AppendMessage(ctx context.Context, m types.Message) (int64, error
 	if created == 0 {
 		created = nowMilli()
 	}
-	res, err := r.st.Exec(ctx,
-		`INSERT INTO messages(id,session_id,role,content_cipher,model,created_at) VALUES(?,?,?,?,?,?)`,
-		m.ID, m.SessionID, string(m.Role), ct, m.Model, created)
+	// 原子事务：INSERT 消息 + 刷新会话 updated_at 一起提交；updated_at 用 MAX(旧,新) 防倒调。
+	seq, err := r.st.execTx(ctx, []stmt{
+		{query: `INSERT INTO messages(id,session_id,role,content_cipher,model,created_at) VALUES(?,?,?,?,?,?)`,
+			args: []any{m.ID, m.SessionID, string(m.Role), ct, m.Model, created}},
+		{query: `UPDATE sessions SET updated_at=MAX(updated_at,?) WHERE id=?`,
+			args: []any{created, m.SessionID}},
+	})
 	if err != nil {
-		return 0, err
-	}
-	seq, _ := res.LastInsertId()
-	// 刷新会话活跃时间。
-	if _, err := r.st.Exec(ctx, `UPDATE sessions SET updated_at=? WHERE id=?`, created, m.SessionID); err != nil {
 		return 0, err
 	}
 	return seq, nil

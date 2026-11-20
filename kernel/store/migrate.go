@@ -125,6 +125,23 @@ func (s *Store) migrate() error {
 	}
 	rows.Close()
 
+	// 防降级/断档：拒绝「数据库 schema 比本程序新」或「已应用版本有缺口」的库，避免静默跑在未知 schema 上。
+	latest := LatestVersion()
+	maxApplied := 0
+	for v := range applied {
+		if v > maxApplied {
+			maxApplied = v
+		}
+	}
+	if maxApplied > latest {
+		return fmt.Errorf("store: database schema v%d is newer than this build supports (max v%d); refusing to run to avoid corruption", maxApplied, latest)
+	}
+	for v := 1; v <= maxApplied; v++ {
+		if !applied[v] {
+			return fmt.Errorf("store: schema gap: applied max v%d but missing v%d; refusing to run", maxApplied, v)
+		}
+	}
+
 	for _, m := range migrations {
 		if applied[m.version] {
 			continue
