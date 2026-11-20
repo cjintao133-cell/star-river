@@ -152,6 +152,10 @@ private fun AdvancedSettings(
     var nativeSearch by remember { mutableStateOf(Prefs.nativeSearch(ctx)) }
     var communityBase by remember { mutableStateOf(CommunityPrefs.base(ctx)) }
     var personalTag by remember { mutableStateOf(SysPrefs.personalTag(ctx)) }
+    var imgBase by remember { mutableStateOf(ImagePrefs.base(ctx)) }
+    var imgModel by remember { mutableStateOf(ImagePrefs.model(ctx)) }
+    var imgKey by remember { mutableStateOf(ImagePrefs.apiKey(ctx)) }
+    var imgEditPath by remember { mutableStateOf(ImagePrefs.editPath(ctx)) }
     var saved by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -223,6 +227,13 @@ private fun AdvancedSettings(
             label = { Text("X-Star-River-Tag（如 用户；默认头 X-Star-River-Client 恒带）") },
             modifier = Modifier.fillMaxWidth(), singleLine = true)
 
+        Text("画图模型（相册/自拍：人设图垫图，直接画图模型）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        OutlinedTextField(value = imgBase, onValueChange = { imgBase = it }, label = { Text("画图端点 base（如 https://api.xxx.com/v1）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = imgModel, onValueChange = { imgModel = it }, label = { Text("画图模型（如 gpt-image-1 / 支持的图生图模型）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(value = imgKey, onValueChange = { imgKey = it }, label = { Text("画图 API Key（加密存储）") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(value = imgEditPath, onValueChange = { imgEditPath = it }, label = { Text("图生图路径（默认 /images/edits，可留空）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Text("垫图=人设图；有垫图走图生图端点保角色一致性，无需 ComfyUI。", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
         Button(onClick = {
             Prefs.setSearchProvider(ctx, provider)
             Prefs.setSearxngBase(ctx, searxng.trim())
@@ -233,7 +244,10 @@ private fun AdvancedSettings(
             CommunityPrefs.setBase(ctx, communityBase.trim())
             SysPrefs.setPersonalTag(ctx, personalTag.trim())
             HeaderHelp.apply(ctx)
-            saved = "已保存进阶设置"
+            ImagePrefs.setBase(ctx, imgBase.trim()); ImagePrefs.setModel(ctx, imgModel.trim())
+            ImagePrefs.setEditPath(ctx, imgEditPath.trim()); ImagePrefs.setApiKey(ctx, imgKey.trim())
+            val vr = VisualCfg.initIfConfigured(ctx)
+            saved = if (vr == "not-configured") "已保存（画图模型未配全）" else if (vr.startsWith("ERR")) "已保存，画图初始化失败：$vr" else "已保存，画图模型就绪"
         }, modifier = Modifier.padding(top = 8.dp)) { Text("保存进阶设置") }
         if (saved.isNotEmpty()) Text(saved, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
     }

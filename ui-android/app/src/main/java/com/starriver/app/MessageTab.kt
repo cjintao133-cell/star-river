@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -58,8 +59,11 @@ fun MessageTab(config: ChatConfig, app: AppState, onOpenSettings: () -> Unit) {
         SearchScreen(config) { searchOpen = false }
         return
     }
+    var albumOpen by remember { mutableStateOf(false) }
+    if (albumOpen) { AlbumScreen(app) { albumOpen = false }; return }
+    if (searchOpen) { SearchScreen(config) { searchOpen = false }; return }
     val sid = app.currentSessionId
-    if (sid == null) SessionList(config, app) { searchOpen = true } else ChatView(config, app, sid)
+    if (sid == null) SessionList(config, app) { searchOpen = true } else ChatView(config, app, sid) { albumOpen = true }
 }
 
 /** QQ 式会话列表：新建 / 搜索 / 点进 / 删除。 */
@@ -108,7 +112,7 @@ private fun SessionRow(s: SessionUi, onOpen: () -> Unit, onDelete: () -> Unit) {
 
 /** 进聊：顶栏返回 / 气泡流 / 输入栏。消息持久化走 appendMessage/listMessages。 */
 @Composable
-private fun ChatView(config: ChatConfig, app: AppState, sid: String) {
+private fun ChatView(config: ChatConfig, app: AppState, sid: String, onOpenAlbum: () -> Unit) {
     val msgs = remember(sid) { mutableStateListOf<MsgUi>() }
     LaunchedEffect(sid) { msgs.clear(); msgs.addAll(loadMessages(sid)) }
     var input by remember { mutableStateOf("") }
@@ -195,18 +199,28 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String) {
         ) {
             items(msgs.size) { i -> MessageBubble(msgs[i], config) }
         }
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(if (recording) "⏹" else "🎤", fontSize = 20.sp,
-                modifier = Modifier.semantics { contentDescription = if (recording) "停止录音" else "语音输入" }.clickable {
-                    if (recording) stopRec()
-                    else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRec()
-                    else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                })
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // 语音（干净图标，录音中变方块）
+            Box(Modifier.size(40.dp).clickable {
+                if (recording) stopRec()
+                else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRec()
+                else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }, contentAlignment = Alignment.Center) {
+                val micTint = if (recording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                if (recording) IconStop(micTint) else IconMic(micTint)
+            }
             OutlinedTextField(
                 value = input, onValueChange = { input = it },
-                modifier = Modifier.weight(1f), label = { Text(AppI18n.t("chat.input_placeholder")) }, maxLines = 4,
+                modifier = Modifier.weight(1f), placeholder = { Text(AppI18n.t("chat.input_placeholder")) }, maxLines = 4, shape = RoundedCornerShape(22.dp),
             )
-            Button(onClick = { send() }, enabled = input.isNotBlank() && !busy) { Text(if (busy) "…" else AppI18n.t("chat.send")) }
+            // 相册/自拍（干净相机图标，进相册页）
+            Box(Modifier.size(40.dp).clickable { onOpenAlbum() }, contentAlignment = Alignment.Center) {
+                IconCamera(MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            // 发送（干净纸飞机图标）
+            Button(onClick = { send() }, enabled = input.isNotBlank() && !busy, shape = RoundedCornerShape(22.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp)) {
+                if (busy) Text("…") else IconSend(MaterialTheme.colorScheme.onPrimary, 20.dp)
+            }
         }
     }
 }

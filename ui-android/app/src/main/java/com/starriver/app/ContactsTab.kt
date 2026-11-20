@@ -50,6 +50,8 @@ fun ContactsTab(config: ChatConfig, app: AppState, onOpenMessages: () -> Unit) {
     var showForm by remember { mutableStateOf(false) }
     var formTarget by remember { mutableStateOf<CharUi?>(null) }
     var formIsNew by remember { mutableStateOf(true) }
+    var showAlbum by remember { mutableStateOf(false) }
+    if (showAlbum) { AlbumScreen(app) { showAlbum = false }; return }
 
     fun refresh() {
         Bg.run({ Mobilebind.listCharacters() }) { raw ->
@@ -83,6 +85,7 @@ fun ContactsTab(config: ChatConfig, app: AppState, onOpenMessages: () -> Unit) {
             Button(onClick = { formTarget = null; formIsNew = true; showForm = true }) { Text("＋ 创建角色") }
             OutlinedButton(onClick = { importLauncher.launch("application/json") }) { Text("导入角色卡") }
             OutlinedButton(onClick = { importLauncher.launch("*/*") }) { Text("更多格式") }
+            OutlinedButton(onClick = { showAlbum = true }) { IconCamera(MaterialTheme.colorScheme.onSurface, 18.dp) }
         }
         if (err.isNotEmpty()) Text(err, color = Color.Red, fontSize = 12.sp)
         if (list.isEmpty()) {

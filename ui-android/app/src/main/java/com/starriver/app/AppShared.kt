@@ -225,3 +225,19 @@ object CommunityPrefs {
     fun base(ctx: Context): String = p(ctx).getString("community.base", "") ?: ""
     fun setBase(ctx: Context, v: String) = p(ctx).edit().putString("community.base", v).apply()
 }
+
+/** 画图模型配置（相册/自拍用）：base/model 明文存；apiKey 走 SecretStore 加密。 */
+object ImagePrefs {
+    private const val PREF = "star_river_prefs"
+    private const val KEY_ID = "image.api_key"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun base(ctx: Context): String = p(ctx).getString("image.base", "") ?: ""
+    fun setBase(ctx: Context, v: String) = p(ctx).edit().putString("image.base", v).apply()
+    fun model(ctx: Context): String = p(ctx).getString("image.model", "") ?: ""
+    fun setModel(ctx: Context, v: String) = p(ctx).edit().putString("image.model", v).apply()
+    fun editPath(ctx: Context): String = p(ctx).getString("image.edit_path", "") ?: ""
+    fun setEditPath(ctx: Context, v: String) = p(ctx).edit().putString("image.edit_path", v).apply()
+    fun apiKey(ctx: Context): String = SecretStore.get(ctx, KEY_ID) ?: ""
+    fun setApiKey(ctx: Context, v: String) { if (v.isNotBlank()) SecretStore.put(ctx, KEY_ID, v) }
+    fun configured(ctx: Context): Boolean = base(ctx).isNotBlank() && model(ctx).isNotBlank()
+}
