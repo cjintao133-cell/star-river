@@ -46,3 +46,38 @@ symbols:
 	@x86_64-w64-mingw32-nm --defined-only $(OUT)/windows-amd64/libdevice_probe.a
 	@echo "== linux .o visibility =="
 	@readelf -s $(OUT)/linux-amd64/device_probe.o | grep -E 'GLOBAL|WEAK'
+
+# ---- T-M3-01 vector: int8 量化向量检索（三目标静态库 + 桌面单测/基准） ----
+VSRC := native/vector/vector.c
+VOUT := build/native
+VFLAGS := -O2 -Wall -Wextra -Werror -std=c11
+
+vector-linux:
+	mkdir -p $(VOUT)/linux-amd64
+	gcc $(VFLAGS) -fvisibility=hidden -c $(VSRC) -o $(VOUT)/linux-amd64/vector.o
+	ar rcs $(VOUT)/linux-amd64/libvector.a $(VOUT)/linux-amd64/vector.o
+	strip --strip-unneeded $(VOUT)/linux-amd64/libvector.a
+
+vector-android:
+	mkdir -p $(VOUT)/android-arm64
+	$(NDK_CC) $(VFLAGS) -fvisibility=hidden -c $(VSRC) -o $(VOUT)/android-arm64/vector.o
+	$(NDK_AR) rcs $(VOUT)/android-arm64/libvector.a $(VOUT)/android-arm64/vector.o
+	$(NDK_STRIP) --strip-unneeded $(VOUT)/android-arm64/libvector.a
+
+vector-windows:
+	mkdir -p $(VOUT)/windows-amd64
+	x86_64-w64-mingw32-gcc $(VFLAGS) -c $(VSRC) -o $(VOUT)/windows-amd64/vector.o
+	x86_64-w64-mingw32-gcc-ar rcs $(VOUT)/windows-amd64/libvector.a $(VOUT)/windows-amd64/vector.o
+	x86_64-w64-mingw32-strip --strip-unneeded $(VOUT)/windows-amd64/libvector.a
+
+vector: vector-linux vector-android vector-windows
+
+vector-test:
+	mkdir -p build
+	gcc $(VFLAGS) $(VSRC) native/vector/test/test_vector.c -o build/vector-test -lm
+
+bench-vector:
+	mkdir -p build
+	gcc $(VFLAGS) $(VSRC) native/vector/test/bench_vector.c -o build/bench-vector -lm
+
+.PHONY: vector vector-linux vector-android vector-windows vector-test bench-vector
