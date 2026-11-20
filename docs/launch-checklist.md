@@ -41,7 +41,7 @@ Open a PR to add the repo under the right section of each (read each list's CONT
 - [x] `LICENSE` (Apache-2.0), `README`, `CONTRIBUTING`, `CODE_OF_CONDUCT`, `SECURITY.md`
 - [x] Issue/PR templates, `dependabot.yml`
 - [x] CI (`ci.yml`): gofmt, vet, build, test, `-race`, layering guard, **govulncheck**, staticcheck, demo smoke
-- [x] CodeQL (`codeql.yml`), OpenSSF Scorecard (`scorecard.yml`)
+- [x] CodeQL (`codeql.yml`) — green; OpenSSF Scorecard can be enabled later (its action hit a GitHub infra error on first run)
 - [x] C hot paths have ASan/Valgrind validation design (see `native/`)
 
 ### You must do (needs your account / repo live)
@@ -50,7 +50,7 @@ Open a PR to add the repo under the right section of each (read each list's CONT
    (require PR + status checks), and **signed tags/releases**.
 3. **OpenSSF Best Practices Badge**: register at https://www.bestpractices.dev and fill in — start with **Baseline-1**,
    then pursue **Passing**. Every criterion is self-certified with evidence URLs; the repo files above cover most of it.
-4. **Scorecard badge**: after `scorecard.yml` runs once, add the badge to README.
+4. **OpenSSF Scorecard**: re-add `scorecard.yml` when GitHub Actions infra is healthy; then add its badge to README.
 
 ### Honest limits (do not overclaim)
 - The badge is **self-certified best-practices compliance**, **not a security audit**.

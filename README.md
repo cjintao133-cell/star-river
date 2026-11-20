@@ -3,7 +3,6 @@
 [![CI](https://github.com/cjintao133-cell/star-river/actions/workflows/ci.yml/badge.svg)](https://github.com/cjintao133-cell/star-river/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cjintao133-cell/star-river)](https://goreportcard.com/report/github.com/cjintao133-cell/star-river)
 [![Go Reference](https://pkg.go.dev/badge/github.com/cjintao133-cell/star-river.svg)](https://pkg.go.dev/github.com/cjintao133-cell/star-river)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cjintao133-cell/star-river/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cjintao133-cell/star-river)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.26.11+-00ADD8.svg)](go.mod)
 
