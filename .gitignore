@@ -8,3 +8,6 @@ local.properties
 *.so
 *.dll
 *-sources.jar
+# 调试二进制 / 分发产物（勿入库）
+stresssim
+dist/
