@@ -55,6 +55,7 @@ fun SettingsTab(
     if (screen == 1) { PermissionScreen { screen = 0 }; return }
     if (screen == 2) { ReportScreen { screen = 0 }; return }
     if (screen == 3) { SafetyScreen { screen = 0 }; return }
+    if (screen == 4) { PanelsScreen { screen = 0 }; return }
     Column(Modifier.fillMaxSize().padding(12.dp)) {
         Text(AppI18n.t("settings.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -73,7 +74,8 @@ fun SettingsTab(
             else -> DeveloperSettings(config,
                 onOpenPermission = { screen = 1 },
                 onOpenReport = { screen = 2 },
-                onOpenSafety = { screen = 3 })
+                onOpenSafety = { screen = 3 },
+                onOpenPanels = { screen = 4 })
         }
     }
 }
@@ -224,6 +226,7 @@ private fun DeveloperSettings(
     onOpenPermission: () -> Unit,
     onOpenReport: () -> Unit,
     onOpenSafety: () -> Unit,
+    onOpenPanels: () -> Unit,
 ) {
     var info by remember { mutableStateOf("") }
     var probe by remember { mutableStateOf("") }
@@ -234,6 +237,7 @@ private fun DeveloperSettings(
             OutlinedButton(onClick = onOpenReport) { Text("举报与反馈") }
         }
         OutlinedButton(onClick = onOpenSafety, modifier = Modifier.fillMaxWidth()) { Text("🛡 系统 · 安全 · 自愈板块") }
+        OutlinedButton(onClick = onOpenPanels, modifier = Modifier.fillMaxWidth()) { Text("📊 开发者三面板（情绪/记忆/上下文）") }
         Text("内核信息", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
         Button(onClick = {
             Bg.run({ "version=" + Mobilebind.version() + "\n\nDeviceProfile=\n" + Mobilebind.deviceProfile() }) { info = it }

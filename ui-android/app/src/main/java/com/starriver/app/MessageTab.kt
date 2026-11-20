@@ -35,7 +35,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,6 +49,7 @@ import mobilebind.ChatSink
 import mobilebind.Mobilebind
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Base64
 
 @Composable
 fun MessageTab(config: ChatConfig, app: AppState, onOpenSettings: () -> Unit) {
@@ -111,6 +117,22 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String) {
     val listState = rememberLazyListState()
     val title = app.sessions.firstOrNull { it.id == sid }?.title ?: "对话"
     val system = app.sessionSystem[sid] ?: config.system
+    val ctx = LocalContext.current
+    var recording by remember { mutableStateOf(false) }
+    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) { if (Stt.start(ctx) == "OK") recording = true }
+    }
+    fun startRec() { if (Stt.start(ctx) == "OK") recording = true }
+    fun stopRec() {
+        val bytes = Stt.stop(); recording = false
+        if (bytes == null) return
+        val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        Bg.run({ Mobilebind.sttTranscribe(config.baseUrl, config.apiKey, b64, "a.m4a", "") }) { r ->
+            if (r.startsWith("ERR:")) { input = ""; /* 失败静默 */ } else {
+                try { input = JSONObject(r).optString("text") } catch (e: Exception) { }
+            }
+        }
+    }
 
     LaunchedEffect(msgs.size) {
         if (msgs.isNotEmpty()) listState.animateScrollToItem(msgs.size - 1)
@@ -174,7 +196,12 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String) {
             items(msgs.size) { i -> MessageBubble(msgs[i], config) }
         }
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("🎤", fontSize = 20.sp, modifier = Modifier.semantics { contentDescription = "语音输入（待接线）" }.clickable { })
+            Text(if (recording) "⏹" else "🎤", fontSize = 20.sp,
+                modifier = Modifier.semantics { contentDescription = if (recording) "停止录音" else "语音输入" }.clickable {
+                    if (recording) stopRec()
+                    else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRec()
+                    else micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                })
             OutlinedTextField(
                 value = input, onValueChange = { input = it },
                 modifier = Modifier.weight(1f), label = { Text(AppI18n.t("chat.input_placeholder")) }, maxLines = 4,

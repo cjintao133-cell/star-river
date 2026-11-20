@@ -7,7 +7,7 @@ import java.security.SecureRandom
 
 /**
  * 内核自启：生成/复用一个 32 字节字段加密钥（经 SecretStore/Keystore 加密持有），
- * 打开本地 SQLite 内核（mobilebind.initKernel）。幂等。
+ * 打开本地 SQLite 内核（mobilebind.initKernel），并初始化 MCP 热插拔层（mcpInit + 后台 mcpRestore）。幂等。
  */
 object KernelBoot {
     private const val KEY_ID = "kernel.field_key"
@@ -29,7 +29,12 @@ object KernelBoot {
         } catch (t: Throwable) {
             "ERR:" + (t.message ?: "init failed")
         }
-        if (r == "OK") inited = true
+        if (r == "OK") {
+            inited = true
+            // MCP 热插拔层：加载已装插件配置；后台重连"启用"的插件（不阻塞启动）。
+            try { Mobilebind.mcpInit(ctx.filesDir.absolutePath + "/mcp_servers.json") } catch (t: Throwable) { }
+            Thread { try { Mobilebind.mcpRestore() } catch (t: Throwable) { } }.start()
+        }
         return r
     }
 
