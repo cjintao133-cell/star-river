@@ -69,6 +69,31 @@ var migrations = []migration{
             )`,
 		},
 	},
+	{
+		version: 4,
+		name:    "characters",
+		stmts: []string{
+			`CREATE TABLE characters (
+                id         TEXT PRIMARY KEY,
+                name       TEXT NOT NULL DEFAULT '',
+                description TEXT NOT NULL DEFAULT '',
+                personality TEXT NOT NULL DEFAULT '',
+                scenario   TEXT NOT NULL DEFAULT '',
+                first_mes  TEXT NOT NULL DEFAULT '',
+                alternate_greetings TEXT NOT NULL DEFAULT '[]',
+                mes_example TEXT NOT NULL DEFAULT '',
+                system_prompt TEXT NOT NULL DEFAULT '',
+                post_history_instructions TEXT NOT NULL DEFAULT '',
+                character_book TEXT NOT NULL DEFAULT '{}',
+                avatar     BLOB,
+                persona_image BLOB,
+                created_at INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            )`,
+			`ALTER TABLE sessions ADD COLUMN character_id TEXT NOT NULL DEFAULT ''`,
+			`CREATE INDEX idx_characters_updated ON characters(updated_at)`,
+		},
+	},
 }
 
 // migrate 执行迁移框架：bootstrap 版本表 → 读已应用集合 → 按序在事务内应用未应用者。
