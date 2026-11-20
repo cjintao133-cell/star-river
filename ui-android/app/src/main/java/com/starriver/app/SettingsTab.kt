@@ -157,6 +157,7 @@ private fun AdvancedSettings(
     var imgKey by remember { mutableStateOf(ImagePrefs.apiKey(ctx)) }
     var imgEditPath by remember { mutableStateOf(ImagePrefs.editPath(ctx)) }
     var chatProto by remember { mutableStateOf(ProtoPrefs.provider(ctx)) }
+    var proStatus by remember { mutableStateOf(ProactiveUi.status()) }
     var saved by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -167,6 +168,27 @@ private fun AdvancedSettings(
             OutlinedButton(onClick = { chatProto = "gemini" }, enabled = chatProto != "gemini") { Text("Gemini") }
         }
         Text("选 Claude/Gemini 时，端点/模型按对应官方或中转地址填。", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Text("主动消息（可撤回权限，默认关）", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("启用主动消息", modifier = Modifier.weight(1f), fontSize = 13.sp)
+            Switch(checked = proStatus.enabled, onCheckedChange = { v -> Bg.run({ Mobilebind.proactiveSetEnabled(v) }) { proStatus = ProactiveUi.status() } })
+        }
+        if (proStatus.enabled) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("记忆复习到期", modifier = Modifier.weight(1f), fontSize = 12.sp)
+                Switch(checked = proStatus.memReview, onCheckedChange = { v -> Bg.run({ Mobilebind.proactiveSetSource("memory_review", v) }) { proStatus = ProactiveUi.status() } })
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("人设日程", modifier = Modifier.weight(1f), fontSize = 12.sp)
+                Switch(checked = proStatus.schedule, onCheckedChange = { v -> Bg.run({ Mobilebind.proactiveSetSource("schedule", v) }) { proStatus = ProactiveUi.status() } })
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("情绪驱动", modifier = Modifier.weight(1f), fontSize = 12.sp)
+                Switch(checked = proStatus.emotion, onCheckedChange = { v -> Bg.run({ Mobilebind.proactiveSetSource("emotion", v) }) { proStatus = ProactiveUi.status() } })
+            }
+            OutlinedButton(onClick = { Bg.run({ ProactiveUi.tickAndNotify(ctx).toString() }) { saved = "已触发一次主动评估" } }) { Text("立即评估一次") }
+        }
 
         Text(AppI18n.t("settings.theme"), fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

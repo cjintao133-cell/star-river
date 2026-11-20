@@ -57,7 +57,11 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
     var lang by remember { mutableStateOf(LocaleHelp.effective(ctx)) }
     AppI18n.load(ctx, lang)
     val app = remember { AppState() }
-    LaunchedEffect(Unit) { app.reload() }
+    LaunchedEffect(Unit) {
+        app.reload()
+        // 主动能力：启动时后台评估一次（若用户已开启），有 nudge 则本地通知。
+        Thread { try { ProactiveUi.tickAndNotify(ctx) } catch (t: Throwable) { } }.start()
+    }
 
     AppTheme(theme) {
         key(lang, theme.mode, theme.accent, theme.radiusDp) {

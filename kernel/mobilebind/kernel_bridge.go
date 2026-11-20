@@ -62,6 +62,7 @@ func InitKernel(dbPath, cipherKeyBase64 string) string {
 	tdMu.Lock(); tdIdx = nil; tdMu.Unlock()
 	mcpMu.Lock(); mcpMgr = nil; mcpMu.Unlock()
 	resetAssembly()
+	resetProactive()
 	return "OK"
 }
 
