@@ -12,7 +12,7 @@
   "contribution_status": "Met",
   "contribution_justification": "CONTRIBUTING.md documents the per-commit gate, DCO sign-off, and red lines: https://github.com/cjintao133-cell/star-river/blob/main/CONTRIBUTING.md.",
   "contribution_requirements_status": "Met",
-  "contribution_requirements_justification": "CONTRIBUTING.md lists the required checks a change must pass (gofmt, go vet, staticcheck, go test, layering guard) and the process.",
+  "contribution_requirements_justification": "CONTRIBUTING.md lists the required checks a change must pass (gofmt, go vet, staticcheck, go test, layering guard) and the process: https://github.com/cjintao133-cell/star-river/blob/main/CONTRIBUTING.md",
   "license_location_status": "Met",
   "license_location_justification": "LICENSE (Apache-2.0) at repository root: https://github.com/cjintao133-cell/star-river/blob/main/LICENSE.",
   "floss_license_status": "Met",
@@ -45,7 +45,7 @@
   "report_tracker_status": "Met",
   "report_tracker_justification": "Issue tracker: https://github.com/cjintao133-cell/star-river/issues.",
   "report_process_status": "Met",
-  "report_process_justification": "Bugs and requests are filed via GitHub Issues (templates configured).",
+  "report_process_justification": "Bugs and requests are filed via GitHub Issues (templates configured): https://github.com/cjintao133-cell/star-river/issues",
   "report_responses_status": "Met",
   "report_responses_justification": "The maintainer responds to bug reports on the issue tracker on a best-effort basis (solo project).",
   "enhancement_responses_status": "Met",
@@ -55,7 +55,7 @@
   "vulnerability_report_process_status": "Met",
   "vulnerability_report_process_justification": "SECURITY.md documents the vulnerability reporting process and coordinated disclosure: https://github.com/cjintao133-cell/star-river/blob/main/SECURITY.md.",
   "vulnerability_report_private_status": "Met",
-  "vulnerability_report_private_justification": "Private vulnerability reporting via GitHub Security Advisories is enabled, or by email as stated in SECURITY.md.",
+  "vulnerability_report_private_justification": "Private reporting via GitHub Security Advisories: https://github.com/cjintao133-cell/star-river/security/advisories/new , or by email as stated in SECURITY.md (https://github.com/cjintao133-cell/star-river/blob/main/SECURITY.md).",
   "vulnerability_report_response_status": "Met",
   "vulnerability_report_response_justification": "SECURITY.md commits to acknowledging a report within 7 days.",
   "build_status": "Met",
@@ -134,5 +134,7 @@
   "no_leaked_credentials_status": "Met",
   "no_leaked_credentials_justification": "No secrets are committed; keys are read only from files/env/Keystore at runtime, never hardcoded.",
   "english_status": "Met",
-  "english_justification": "Primary documentation is in English (README.md and docs/*.md)."
+  "english_justification": "Primary documentation is in English (README.md and docs/*.md).",
+  "maintained_status": "Met",
+  "maintained_justification": "Actively maintained: recent commits, CI runs on every push, releases tagged (v0.1.0)."
 }
