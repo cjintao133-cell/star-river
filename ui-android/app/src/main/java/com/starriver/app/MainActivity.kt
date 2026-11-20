@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppCtx.ctx = applicationContext
         KernelBoot.ensure(this)
+        Diag.install(this)
         ProtoPrefs.apply(this)
         val initial = ConfigStore.load(this)
         setContent {

@@ -58,6 +58,7 @@ func InitKernel(dbPath, cipherKeyBase64 string) string {
 		return "ERR:" + err.Error()
 	}
 	kbStore, kbRepo, kbChars = st, repo, chars
+	setDumpsDir(dbPath)
 	// 重开库后重置派生单例（tooldisc 索引 / MCP 管理器），避免指向已关闭的旧库。
 	tdMu.Lock(); tdIdx = nil; tdMu.Unlock()
 	mcpMu.Lock(); mcpMgr = nil; mcpMu.Unlock()

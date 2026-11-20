@@ -60,6 +60,7 @@ fun SettingsTab(
     if (screen == 2) { ReportScreen { screen = 0 }; return }
     if (screen == 3) { SafetyScreen { screen = 0 }; return }
     if (screen == 4) { PanelsScreen { screen = 0 }; return }
+    if (screen == 5) { DiagScreen { screen = 0 }; return }
     Column(Modifier.fillMaxSize().padding(12.dp)) {
         Text(AppI18n.t("settings.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -80,7 +81,8 @@ fun SettingsTab(
                 onOpenPermission = { screen = 1 },
                 onOpenReport = { screen = 2 },
                 onOpenSafety = { screen = 3 },
-                onOpenPanels = { screen = 4 })
+                onOpenPanels = { screen = 4 },
+                onOpenDiag = { screen = 5 })
         }
     }
 }
@@ -317,6 +319,7 @@ private fun DeveloperSettings(
     onOpenReport: () -> Unit,
     onOpenSafety: () -> Unit,
     onOpenPanels: () -> Unit,
+    onOpenDiag: () -> Unit,
 ) {
     var info by remember { mutableStateOf("") }
     var probe by remember { mutableStateOf("") }
@@ -328,6 +331,7 @@ private fun DeveloperSettings(
         }
         OutlinedButton(onClick = onOpenSafety, modifier = Modifier.fillMaxWidth()) { Text("🛡 系统 · 安全 · 自愈板块") }
         OutlinedButton(onClick = onOpenPanels, modifier = Modifier.fillMaxWidth()) { Text("📊 开发者三面板（情绪/记忆/上下文）") }
+        OutlinedButton(onClick = onOpenDiag, modifier = Modifier.fillMaxWidth()) { Text("🧯 崩溃诊断 · 隐私边界") }
         Text("内核信息", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
         Button(onClick = {
             Bg.run({ "version=" + Mobilebind.version() + "\n\nDeviceProfile=\n" + Mobilebind.deviceProfile() }) { info = it }
