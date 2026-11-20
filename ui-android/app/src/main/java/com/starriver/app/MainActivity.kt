@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * 星海容器 · Android 入口。
- * 阶段 B：四栏血肉。阶段 C：流星动效背景 + 主题/减少动效持久化 + 无障碍 + 语言切换。
+ * 阶段 B：四栏血肉。阶段 C：流星动效背景/主题/语言/权限/举报/系统安全自愈板块。
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,15 +48,15 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
     val ctx = LocalContext.current
     var config by remember { mutableStateOf(initialConfig) }
     var tab by remember { mutableStateOf(0) }
-    var themeMode by remember { mutableStateOf(UiPrefs.themeMode(ctx)) }
+    var theme by remember { mutableStateOf(ThemePrefs.load(ctx)) }
     var reduceMotion by remember { mutableStateOf(UiPrefs.reduceMotion(ctx)) }
     var lang by remember { mutableStateOf(LangPrefs.lang(ctx)) }
-    AppI18n.load(ctx, lang) // 幂等；切换语言时重载字符串表
+    AppI18n.load(ctx, lang)
     val app = remember { AppState() }
     LaunchedEffect(Unit) { app.reload() }
 
-    AppTheme(themeMode) {
-        key(lang, themeMode) {
+    AppTheme(theme) {
+        key(lang, theme.mode, theme.accent, theme.radiusDp) {
             val body: @Composable () -> Unit = {
                 Column(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -66,10 +66,10 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
                             2 -> CommunityTab()
                             else -> SettingsTab(
                                 config = config,
-                                themeMode = themeMode,
+                                theme = theme,
                                 reduceMotion = reduceMotion,
                                 lang = lang,
-                                onThemeChange = { themeMode = it; UiPrefs.setThemeMode(ctx, it) },
+                                onThemeChange = { theme = it; ThemePrefs.save(ctx, it) },
                                 onReduceMotionChange = { reduceMotion = it; UiPrefs.setReduceMotion(ctx, it) },
                                 onLangChange = { lang = it; LangPrefs.setLang(ctx, it) },
                                 onSave = { cfg -> config = cfg; persist(cfg) },
@@ -79,7 +79,7 @@ private fun StarRiverApp(initialConfig: ChatConfig, persist: (ChatConfig) -> Uni
                     BottomBar(tab) { tab = it }
                 }
             }
-            if (themeMode == ThemeMode.NIGHT) {
+            if (theme.mode == ThemeMode.NIGHT) {
                 StarryBackdrop(reduceMotion = reduceMotion) { body() }
             } else {
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { body() }

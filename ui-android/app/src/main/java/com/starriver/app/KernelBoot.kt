@@ -32,4 +32,12 @@ object KernelBoot {
         if (r == "OK") inited = true
         return r
     }
+
+    /** 自愈/看门狗用：重新打开内核（幂等）。不改密钥、不覆盖损坏数据。 */
+    fun reinit(ctx: Context): String {
+        inited = false
+        return ensure(ctx)
+    }
+
+    fun isInited(): Boolean = inited
 }

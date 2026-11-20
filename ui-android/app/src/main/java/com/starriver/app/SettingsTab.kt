@@ -1,12 +1,20 @@
 package com.starriver.app
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -29,14 +38,14 @@ import androidx.compose.ui.unit.sp
 import mobilebind.Mobilebind
 import org.json.JSONObject
 
-/** 设置三层：新手（端点）/ 进阶（主题·动效·搜索·语音·原生搜索）/ 开发者（诊断·探测）。 */
+/** 设置三层：新手（端点）/ 进阶（主题·动效·搜索·语音·原生搜索）/ 开发者（合规·诊断·探测）。 */
 @Composable
 fun SettingsTab(
     config: ChatConfig,
-    themeMode: ThemeMode,
+    theme: ThemeConfig,
     reduceMotion: Boolean,
     lang: String,
-    onThemeChange: (ThemeMode) -> Unit,
+    onThemeChange: (ThemeConfig) -> Unit,
     onReduceMotionChange: (Boolean) -> Unit,
     onLangChange: (String) -> Unit,
     onSave: (ChatConfig) -> Unit,
@@ -45,6 +54,7 @@ fun SettingsTab(
     var screen by remember { mutableStateOf(0) }
     if (screen == 1) { PermissionScreen { screen = 0 }; return }
     if (screen == 2) { ReportScreen { screen = 0 }; return }
+    if (screen == 3) { SafetyScreen { screen = 0 }; return }
     Column(Modifier.fillMaxSize().padding(12.dp)) {
         Text(AppI18n.t("settings.title"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -59,8 +69,11 @@ fun SettingsTab(
         }
         when (tier) {
             0 -> NoviceSettings(config, onSave)
-            1 -> AdvancedSettings(themeMode, reduceMotion, onThemeChange, onReduceMotionChange)
-            else -> DeveloperSettings(config, onOpenPermission = { screen = 1 }, onOpenReport = { screen = 2 })
+            1 -> AdvancedSettings(theme, reduceMotion, onThemeChange, onReduceMotionChange)
+            else -> DeveloperSettings(config,
+                onOpenPermission = { screen = 1 },
+                onOpenReport = { screen = 2 },
+                onOpenSafety = { screen = 3 })
         }
     }
 }
@@ -117,11 +130,12 @@ private fun NoviceSettings(config: ChatConfig, onSave: (ChatConfig) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AdvancedSettings(
-    themeMode: ThemeMode,
+    theme: ThemeConfig,
     reduceMotion: Boolean,
-    onThemeChange: (ThemeMode) -> Unit,
+    onThemeChange: (ThemeConfig) -> Unit,
     onReduceMotionChange: (Boolean) -> Unit,
 ) {
     val ctx = LocalContext.current
@@ -134,16 +148,34 @@ private fun AdvancedSettings(
     var saved by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("主题", fontWeight = FontWeight.Bold)
+        Text(AppI18n.t("settings.theme"), fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onThemeChange(ThemeMode.DAY) }, enabled = themeMode != ThemeMode.DAY) { Text("卡其日间") }
-            OutlinedButton(onClick = { onThemeChange(ThemeMode.NIGHT) }, enabled = themeMode != ThemeMode.NIGHT) { Text("夜间流星") }
+            OutlinedButton(onClick = { onThemeChange(theme.copy(mode = ThemeMode.DAY)) }, enabled = theme.mode != ThemeMode.DAY) { Text("卡其日间") }
+            OutlinedButton(onClick = { onThemeChange(theme.copy(mode = ThemeMode.NIGHT)) }, enabled = theme.mode != ThemeMode.NIGHT) { Text("夜间流星") }
+        }
+        Text("自定义强调色", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            AccentPresets.forEach { (argb, name) ->
+                val c = if (argb == null) MaterialTheme.colorScheme.primary else Color(argb)
+                val selected = theme.accent == argb
+                Box(
+                    Modifier.size(34.dp).background(c, CircleShape)
+                        .border(if (selected) 3.dp else 1.dp, if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline, CircleShape)
+                        .clickable { onThemeChange(theme.copy(accent = argb)) },
+                )
+            }
+        }
+        Text("圆角档", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RadiusPresets.forEach { (dpv, name) ->
+                OutlinedButton(onClick = { onThemeChange(theme.copy(radiusDp = dpv)) }, enabled = theme.radiusDp != dpv) { Text(name) }
+            }
         }
 
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("减少动态 / 关闭氛围动效", fontWeight = FontWeight.Bold)
-                Text("夜间流星背景静止为静态星空（省电、满足无障碍）", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("夜间流星背景静止为静态星空（省电、无障碍）", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(checked = reduceMotion, onCheckedChange = onReduceMotionChange)
         }
@@ -187,7 +219,12 @@ private fun AdvancedSettings(
 }
 
 @Composable
-private fun DeveloperSettings(config: ChatConfig, onOpenPermission: () -> Unit, onOpenReport: () -> Unit) {
+private fun DeveloperSettings(
+    config: ChatConfig,
+    onOpenPermission: () -> Unit,
+    onOpenReport: () -> Unit,
+    onOpenSafety: () -> Unit,
+) {
     var info by remember { mutableStateOf("") }
     var probe by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -196,7 +233,8 @@ private fun DeveloperSettings(config: ChatConfig, onOpenPermission: () -> Unit, 
             OutlinedButton(onClick = onOpenPermission) { Text("权限管理") }
             OutlinedButton(onClick = onOpenReport) { Text("举报与反馈") }
         }
-        Text("内核信息", fontWeight = FontWeight.Bold)
+        OutlinedButton(onClick = onOpenSafety, modifier = Modifier.fillMaxWidth()) { Text("🛡 系统 · 安全 · 自愈板块") }
+        Text("内核信息", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
         Button(onClick = {
             Bg.run({ "version=" + Mobilebind.version() + "\n\nDeviceProfile=\n" + Mobilebind.deviceProfile() }) { info = it }
         }) { Text("读取内核版本 / 设备档") }

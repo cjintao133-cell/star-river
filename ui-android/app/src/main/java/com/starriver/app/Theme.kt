@@ -4,10 +4,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /** 主题模式：卡其日间 / 夜间流星（见 docs/ui-spec.md §8）。 */
 enum class ThemeMode { DAY, NIGHT }
+
+/** 主题配置（T-M4-04 主题 v2）：基础模式 + 自定义强调色(ARGB, null=默认) + 圆角档(dp)。 */
+data class ThemeConfig(
+    val mode: ThemeMode = ThemeMode.DAY,
+    val accent: Int? = null,
+    val radiusDp: Int = 16,
+)
+
+/** 全应用圆角令牌：组件读它而非硬编码，主题切换/自定义即时生效。 */
+val LocalCornerRadius = staticCompositionLocalOf<Dp> { 16.dp }
 
 // 卡其日间：暖橙(primary)+砖红(secondary)，卡其底。
 private val DayColors = lightColorScheme(
@@ -39,12 +54,35 @@ private val NightColors = darkColorScheme(
     outline = Color(0xFF2A3352),
 )
 
-/** 应用主题：按 mode 选色板，套 Material3。 */
+/** 依据强调色算可读的前景色（深色底配浅字，浅色底配深字）。 */
+private fun onColorFor(c: Color): Color = if (c.luminance() > 0.5f) Color(0xFF1A130C) else Color.White
+
+/** 应用主题：按配置选基色板 + 覆盖强调色 + 提供圆角令牌。 */
 @Composable
-fun AppTheme(mode: ThemeMode, content: @Composable () -> Unit) {
-    val colors = when (mode) {
+fun AppTheme(config: ThemeConfig, content: @Composable () -> Unit) {
+    var colors = when (config.mode) {
         ThemeMode.DAY -> DayColors
         ThemeMode.NIGHT -> NightColors
     }
-    MaterialTheme(colorScheme = colors, content = content)
+    config.accent?.let { argb ->
+        val c = Color(argb)
+        colors = colors.copy(primary = c, onPrimary = onColorFor(c))
+    }
+    CompositionLocalProvider(LocalCornerRadius provides config.radiusDp.dp) {
+        MaterialTheme(colorScheme = colors, content = content)
+    }
 }
+
+/** 圆角档位预设（紧凑/标准/宽松）。 */
+val RadiusPresets = listOf(8 to "紧凑", 16 to "标准", 24 to "宽松")
+
+/** 强调色预设（null = 跟随主题默认）。 */
+val AccentPresets: List<Pair<Int?, String>> = listOf(
+    null to "默认",
+    0xFFD9762F.toInt() to "暖橙",
+    0xFFB5432E.toInt() to "砖红",
+    0xFF38BDF8.toInt() to "青蓝",
+    0xFFA855F7.toInt() to "星紫",
+    0xFF22C55E.toInt() to "青绿",
+    0xFFEC4899.toInt() to "樱粉",
+)

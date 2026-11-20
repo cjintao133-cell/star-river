@@ -200,7 +200,7 @@ private fun MessageBubble(m: MsgUi, config: ChatConfig) {
             modifier = Modifier
                 .widthIn(max = 300.dp)
                 .padding(horizontal = if (isUser) 0.dp else 6.dp)
-                .background(bubbleColor, RoundedCornerShape(12.dp))
+                .background(bubbleColor, RoundedCornerShape(LocalCornerRadius.current))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Column {

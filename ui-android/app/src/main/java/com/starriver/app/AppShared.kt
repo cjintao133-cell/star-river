@@ -181,3 +181,32 @@ object LangPrefs {
     fun lang(ctx: Context): String = p(ctx).getString("ui.lang", "zh") ?: "zh"
     fun setLang(ctx: Context, v: String) = p(ctx).edit().putString("ui.lang", v).apply()
 }
+
+/** 主题 v2 偏好（自定义强调色 + 圆角档）。 */
+object ThemePrefs {
+    private const val PREF = "star_river_prefs"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun load(ctx: Context): ThemeConfig {
+        val raw = p(ctx).getInt("ui.accent", Int.MIN_VALUE)
+        val accent = if (raw == Int.MIN_VALUE) null else raw
+        val mode = if (p(ctx).getInt("ui.theme", 0) == 1) ThemeMode.NIGHT else ThemeMode.DAY
+        return ThemeConfig(mode = mode, accent = accent, radiusDp = p(ctx).getInt("ui.radius", 16))
+    }
+    fun save(ctx: Context, cfg: ThemeConfig) {
+        val ed = p(ctx).edit()
+            .putInt("ui.theme", if (cfg.mode == ThemeMode.NIGHT) 1 else 0)
+            .putInt("ui.radius", cfg.radiusDp)
+        if (cfg.accent == null) ed.remove("ui.accent") else ed.putInt("ui.accent", cfg.accent)
+        ed.apply()
+    }
+}
+
+/** 系统安全与自愈板块偏好。 */
+object SafetyPrefs {
+    private const val PREF = "star_river_prefs"
+    private fun p(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+    fun watchdog(ctx: Context): Boolean = p(ctx).getBoolean("safety.watchdog", true)
+    fun setWatchdog(ctx: Context, v: Boolean) = p(ctx).edit().putBoolean("safety.watchdog", v).apply()
+    fun sandboxStrict(ctx: Context): Boolean = p(ctx).getBoolean("safety.sandbox_strict", true)
+    fun setSandboxStrict(ctx: Context, v: Boolean) = p(ctx).edit().putBoolean("safety.sandbox_strict", v).apply()
+}
