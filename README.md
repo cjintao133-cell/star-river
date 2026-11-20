@@ -43,8 +43,6 @@ star-river/
     hippocampus/ endocrine/ proactive/   闭源插件包
     native/{bridge,vector}  mobilebind/ desktopbind/
   native/       C 模块（device_probe、向量检索）
-  ui-android/       Kotlin Compose
-  ui-desktop/       Compose Multiplatform
   cmd/srchat/       最小 CLI 聊天闭环
   docs/             架构、许可、平台能力表、M0 结论
   scripts/          构建与守卫脚本
