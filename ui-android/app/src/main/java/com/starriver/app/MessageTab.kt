@@ -123,6 +123,15 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String, onOpenAlbum
     val system = app.sessionSystem[sid] ?: config.system
     val ctx = LocalContext.current
     var recording by remember { mutableStateOf(false) }
+    var pendingImgB64 by remember { mutableStateOf("") }
+    var pendingImgMime by remember { mutableStateOf("image/png") }
+    val imgPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) try {
+            val bytes = ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
+            pendingImgB64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+            pendingImgMime = ctx.contentResolver.getType(uri) ?: "image/png"
+        } catch (t: Throwable) { pendingImgB64 = "" }
+    }
     val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) { if (Stt.start(ctx) == "OK") recording = true }
     }
@@ -144,10 +153,11 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String, onOpenAlbum
 
     fun send() {
         val text = input.trim()
-        if (text.isEmpty() || busy) return
-        input = ""
+        val imgB64 = pendingImgB64
+        if ((text.isEmpty() && imgB64.isEmpty()) || busy) return
+        input = ""; pendingImgB64 = ""; pendingImgMime = "image/png"
         busy = true
-        msgs.add(MsgUi("mu-" + System.nanoTime(), "user", text, false))
+        msgs.add(MsgUi("mu-" + System.nanoTime(), "user", if (imgB64.isNotEmpty()) "[图片] " + text else text, false))
         Bg.run({ Mobilebind.appendMessage(sid, "user", text) }) {}
         msgs.add(MsgUi("ma-" + System.nanoTime(), "assistant", "", true))
         val idx = msgs.size - 1
@@ -183,7 +193,11 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String, onOpenAlbum
             override fun onDone(model: String) { h.post { finished = true } }
             override fun onError(msg: String) { h.post { errMsg = "[错误] " + msg } }
         }
-        Bg.run({ Mobilebind.chatStreamTools(config.baseUrl, config.apiKey, config.model, system, text, sink); "OK" }) {}
+        Bg.run({
+            if (imgB64.isNotEmpty()) Mobilebind.chatStreamImage(config.baseUrl, config.apiKey, config.model, system, text, imgB64, pendingImgMime, sink)
+            else Mobilebind.chatStreamTools(config.baseUrl, config.apiKey, config.model, system, text, sink)
+            "OK"
+        }) {}
         h.postDelayed(tick, 18)
     }
 
@@ -198,6 +212,12 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String, onOpenAlbum
             state = listState,
         ) {
             items(msgs.size) { i -> MessageBubble(msgs[i], config) }
+        }
+        if (pendingImgB64.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("已附图", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { pendingImgB64 = "" }) { IconTrash(MaterialTheme.colorScheme.onSurfaceVariant, 16.dp) }
+            }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // 语音（干净图标，录音中变方块）
@@ -214,8 +234,8 @@ private fun ChatView(config: ChatConfig, app: AppState, sid: String, onOpenAlbum
                 modifier = Modifier.weight(1f), placeholder = { Text(AppI18n.t("chat.input_placeholder")) }, maxLines = 4, shape = RoundedCornerShape(22.dp),
             )
             // 相册/自拍（干净相机图标，进相册页）
-            Box(Modifier.size(40.dp).clickable { onOpenAlbum() }, contentAlignment = Alignment.Center) {
-                IconCamera(MaterialTheme.colorScheme.onSurfaceVariant)
+            Box(Modifier.size(40.dp).clickable { imgPicker.launch("image/*") }, contentAlignment = Alignment.Center) {
+                IconPhoto(MaterialTheme.colorScheme.onSurfaceVariant)
             }
             // 发送（干净纸飞机图标）
             Button(onClick = { send() }, enabled = input.isNotBlank() && !busy, shape = RoundedCornerShape(22.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp)) {
