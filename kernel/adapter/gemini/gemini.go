@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"star-river/kernel/core/types"
+	"star-river/kernel/netx"
 )
 
 // Usage token 用量（T-M3-07 统计数据源）。与 openai 适配器同名，便于上层统一映射。
@@ -99,7 +100,7 @@ type Client struct {
 func New(baseURL, apiKey string) *Client {
 	return &Client{
 		BaseURL:     strings.TrimRight(baseURL, "/"),
-		HTTP:        &http.Client{Timeout: 60 * time.Second},
+		HTTP:        netx.Client(60 * time.Second),
 		MaxRetries:  2,
 		BackoffBase: 500 * time.Millisecond,
 		apiKey:      apiKey,

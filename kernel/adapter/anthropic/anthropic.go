@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"star-river/kernel/core/types"
+	"star-river/kernel/netx"
 )
 
 // defaultVersion anthropic-version 头默认值。Anthropic 要求每个请求显式携带该头。
@@ -114,7 +115,7 @@ type Client struct {
 func New(baseURL, apiKey string) *Client {
 	return &Client{
 		BaseURL:     strings.TrimRight(baseURL, "/"),
-		HTTP:        &http.Client{Timeout: 60 * time.Second},
+		HTTP:        netx.Client(60 * time.Second),
 		MaxRetries:  2,
 		BackoffBase: 500 * time.Millisecond,
 		Version:     defaultVersion,

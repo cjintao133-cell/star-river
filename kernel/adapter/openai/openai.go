@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"star-river/kernel/core/types"
+	"star-river/kernel/netx"
 )
 
 // Usage token 用量（P4 / T-M3-07 统计数据源）。
@@ -30,7 +31,7 @@ type ChatRequest struct {
 	Model        string
 	Messages     []types.Message
 	MaxTokens    int
-	NativeSearch bool     // 启用模型原生网页搜索（OpenAI: web_search_options + search-preview 模型）
+	NativeSearch bool      // 启用模型原生网页搜索（OpenAI: web_search_options + search-preview 模型）
 	Tools        []ToolDef // 工具定义（function calling）；空则不传 tools 参数
 }
 
@@ -98,7 +99,7 @@ type Client struct {
 func New(baseURL, apiKey string) *Client {
 	return &Client{
 		BaseURL:     strings.TrimRight(baseURL, "/"),
-		HTTP:        &http.Client{Timeout: 60 * time.Second},
+		HTTP:        netx.Client(60 * time.Second),
 		MaxRetries:  2,
 		BackoffBase: 500 * time.Millisecond,
 		apiKey:      apiKey,
@@ -287,7 +288,7 @@ func buildBody(req ChatRequest, stream bool) ([]byte, error) {
 			params = json.RawMessage(`{"type":"object","properties":{}}`)
 		}
 		body.Tools = append(body.Tools, wireToolIn{
-			Type: "function",
+			Type:     "function",
 			Function: wireToolFn{Name: td.Name, Description: td.Description, Parameters: params},
 		})
 	}
