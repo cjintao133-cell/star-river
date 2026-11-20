@@ -198,7 +198,7 @@ func ChatStreamTools(baseURL, apiKey, model, system, user string, sink ChatSink)
 	}
 	send := buildSender(baseURL, apiKey)
 	sys := assembleSystem(system, user) // 注入情绪语气 + 相关记忆
-	msgs := orchestrator.BuildMinimal(sys, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
+	msgs := orchestrator.BuildMinimal(sys, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000, MaxPersonaChars: 12000})
 	runChatLoop(send, apiKey, model, msgs, user, &capSink{inner: sink, user: user})
 }
 
@@ -221,7 +221,7 @@ func ChatStreamImage(baseURL, apiKey, model, system, user, imageB64, imageMIME s
 	}
 	send := buildSender(baseURL, apiKey)
 	sys := assembleSystem(system, user)
-	msgs := orchestrator.BuildMinimal(sys, nil, um, orchestrator.Limits{MaxMessages: 20, MaxChars: 8000})
+	msgs := orchestrator.BuildMinimal(sys, nil, um, orchestrator.Limits{MaxMessages: 20, MaxChars: 8000, MaxPersonaChars: 12000})
 	runChatLoop(send, apiKey, model, msgs, user, &capSink{inner: sink, user: user})
 }
 

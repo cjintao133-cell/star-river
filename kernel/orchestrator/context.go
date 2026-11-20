@@ -6,6 +6,8 @@ import "star-river/kernel/core/types"
 type Limits struct {
 	MaxMessages int // 含人设与本次用户消息在内的总消息条数上限
 	MaxChars    int // 文本总字符预算（只统计 text / tool_result / tool_use 参数）
+	// MaxPersonaChars persona/system 自身字符上限（<=0 不截断）。防止超大角色卡/记忆注入撑爆请求。
+	MaxPersonaChars int
 }
 
 // msgChars 估算一条消息的文本占用（块文本 + 工具调用参数）。
@@ -28,6 +30,9 @@ func BuildMinimal(persona string, history []types.Message, user types.Message, l
 
 	var personaMsg *types.Message
 	if persona != "" {
+		if lim.MaxPersonaChars > 0 {
+			persona = truncateRunes(persona, lim.MaxPersonaChars)
+		}
 		m := types.Message{Role: types.RoleSystem, Blocks: []types.ContentBlock{{Type: types.BlockText, Text: persona}}}
 		personaMsg = &m
 		out = append(out, m)
@@ -81,4 +86,16 @@ func BuildMinimal(persona string, history []types.Message, user types.Message, l
 
 	out = append(out, user)
 	return out
+}
+
+// truncateRunes 按字符（rune）截断，超限时加省略号。
+func truncateRunes(s string, max int) string {
+	if max <= 0 {
+		return s
+	}
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "…"
 }
