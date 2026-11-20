@@ -11,8 +11,11 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      # Desktop JNI bridge (kernel/desktopbind) needs JDK jni.h; it is built on desktop
-      # toolchains, not in this Linux CI. Exclude it from the cross-platform core gate.
+      # kernel/native cgo links against prebuilt static libs under build/native/ (gitignored).
+      # Build the Linux libs first. Android/Windows libs need NDK/mingw and are built on those toolchains.
+      - name: build native libs (linux)
+        run: make -f native/Makefile linux vector-linux
+      # kernel/desktopbind (desktop JNI bridge) needs JDK jni.h; built on desktop toolchains, not this Linux CI.
       - name: select packages (exclude desktop JNI bridge)
         run: echo "PKGS=$(go list ./... | grep -v /desktopbind | tr '\n' ' ')" >> "$GITHUB_ENV"
       - name: gofmt
