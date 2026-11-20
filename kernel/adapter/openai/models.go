@@ -8,11 +8,18 @@ import (
 )
 
 // ModelInfo /models 条目。created 为端点原样 Unix 秒（非本内核 UnixMilli 契约，
-// 仅透传展示，入库时由 T-M1-06 换算）。
+// 仅透传展示，入库时由 T-M1-06 换算）。富字段（OpenRouter/中转常带）缺失即零值，容错。
 type ModelInfo struct {
-	ID      string `json:"id"`
-	OwnedBy string `json:"owned_by"`
-	Created int64  `json:"created"`
+	ID            string `json:"id"`
+	OwnedBy       string `json:"owned_by"`
+	Created       int64  `json:"created"`
+	ContextLength int    `json:"context_length"`
+	Architecture  struct {
+		Modality         string   `json:"modality"`
+		InputModalities  []string `json:"input_modalities"`
+		OutputModalities []string `json:"output_modalities"`
+	} `json:"architecture"`
+	SupportedParameters []string `json:"supported_parameters"`
 }
 
 // Models 拉取模型列表。超时由 Client.HTTP.Timeout 与 ctx 双重控制，
