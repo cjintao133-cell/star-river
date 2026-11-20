@@ -7,7 +7,7 @@ package mobilebind
 import (
 	"fmt"
 
-	"star-river/kernel/native/bridge"
+	"github.com/cjintao133-cell/star-river/kernel/native/bridge"
 )
 
 // kernelVersion 是内核版本标识。发布链任务（T-M7-06）改为构建期注入前，此处为唯一来源。

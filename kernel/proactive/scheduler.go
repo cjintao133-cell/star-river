@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 // Emitter 主动提醒出口（应用层把它接到通知/bus/UI；本包不依赖 bus，保持纯内核可测）。

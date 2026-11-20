@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // 工具调用参数跨 chunk 累计超过 maxToolArgsBytes 必须报错中止（防参数膨胀刷爆内存）。

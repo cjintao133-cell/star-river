@@ -9,11 +9,11 @@ import (
 	"strings"
 	"sync"
 
-	"star-river/kernel/adapter/anthropic"
-	"star-river/kernel/adapter/gemini"
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/adapter/router"
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/anthropic"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/gemini"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/router"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 var (

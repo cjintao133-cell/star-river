@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 
-	"star-river/kernel/secret"
+	"github.com/cjintao133-cell/star-river/kernel/secret"
 )
 
 func newRepo(t *testing.T) (*Repo, *Store, string) {

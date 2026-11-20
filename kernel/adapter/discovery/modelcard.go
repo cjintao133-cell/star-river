@@ -3,7 +3,7 @@ package discovery
 import (
 	"strings"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // 能力位来源/置信（哪些是实测、哪些是元数据、哪些是推测）。

@@ -6,7 +6,7 @@ package mobilebind
 import (
 	"encoding/json"
 
-	"star-river/kernel/cards"
+	"github.com/cjintao133-cell/star-river/kernel/cards"
 )
 
 // ParseCharacterCard 解析角色卡字节，返回 CharacterDTO 形状的 JSON（含世界书）。失败 "ERR:..."。

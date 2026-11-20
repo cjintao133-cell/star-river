@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
 )
 
 // callSession 模拟一个 MCP 连接，记录被调用情况（验证懒连接只连命中的 server）。

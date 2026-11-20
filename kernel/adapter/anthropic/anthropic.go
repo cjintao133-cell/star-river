@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/core/types"
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // defaultVersion anthropic-version 头默认值。Anthropic 要求每个请求显式携带该头。

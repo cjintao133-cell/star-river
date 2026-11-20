@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // —— 测试替身（不 import 插件包，纯中性实现）——

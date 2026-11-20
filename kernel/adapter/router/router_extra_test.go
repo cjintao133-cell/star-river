@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"star-river/kernel/bus"
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/bus"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 func TestPriceTierString(t *testing.T) {

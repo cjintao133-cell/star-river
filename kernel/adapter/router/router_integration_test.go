@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/bus"
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/bus"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // 集成：真 openai.Client 打 httptest。主端点 500、备端点 SSE 正常 → 路由切备用、

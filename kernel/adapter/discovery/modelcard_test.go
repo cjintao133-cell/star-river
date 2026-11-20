@@ -3,7 +3,7 @@ package discovery
 import (
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 func TestBuildCardClassification(t *testing.T) {

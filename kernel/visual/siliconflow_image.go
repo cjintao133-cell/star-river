@@ -17,7 +17,7 @@ import (
 	"net/http"
 	"strings"
 
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // SiliconFlowImageBackend 硅基流动图像后端。

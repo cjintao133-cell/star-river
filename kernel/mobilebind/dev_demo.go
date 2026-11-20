@@ -4,7 +4,7 @@ package mobilebind
 // 仅用于面板可视化打通；真实数据由应用装配层注入 hippocampus/endocrine 适配器（红线2）。
 // 明确命名 demo*，不会进入生产主链路。演示文本一律中性占位，不含任何具体人设。
 
-import "star-river/kernel/tool"
+import "github.com/cjintao133-cell/star-river/kernel/tool"
 
 type demoMoodSource struct{}
 

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"star-river/kernel/adapter/probe"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/probe"
 )
 
 // probePNG 1x1 透明 PNG（极短探测用）。

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
 )
 
 // ToolCaller 抽象「调用某个 MCP 搜索工具」的能力（*tool.Client 即满足）。

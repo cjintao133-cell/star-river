@@ -18,11 +18,11 @@ import (
 	"sync"
 	"time"
 
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/core/types"
-	"star-river/kernel/orchestrator"
-	"star-river/kernel/tool"
-	"star-river/kernel/tooldisc"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/orchestrator"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/tooldisc"
 )
 
 const (

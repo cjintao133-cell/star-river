@@ -15,7 +15,7 @@ import (
 	"errors"
 	"io"
 
-	"star-river/kernel/secret"
+	"github.com/cjintao133-cell/star-river/kernel/secret"
 )
 
 // 加密层哨兵错误。

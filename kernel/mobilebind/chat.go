@@ -8,9 +8,9 @@ import (
 	"context"
 	"strings"
 
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/core/types"
-	"star-river/kernel/orchestrator"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/orchestrator"
 )
 
 // ChatSink 流式回调。Kotlin 侧实现该接口，接收增量文本与结束/错误。

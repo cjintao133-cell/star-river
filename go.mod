@@ -1,4 +1,4 @@
-module star-river
+module github.com/cjintao133-cell/star-river
 
 go 1.26.11
 

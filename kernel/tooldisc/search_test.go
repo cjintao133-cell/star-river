@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
 )
 
 func TestSearchToolDefinition(t *testing.T) {

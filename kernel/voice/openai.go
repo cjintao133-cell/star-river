@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // defaultTimeout 默认 HTTP 超时（语音文件较大，放宽）。

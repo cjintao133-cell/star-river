@@ -16,7 +16,7 @@ import "C"
 import (
 	"strings"
 
-	"star-river/kernel/mobilebind"
+	"github.com/cjintao133-cell/star-river/kernel/mobilebind"
 )
 
 // SrInitKernel 打开本地数据库（cipherKeyBase64 为 32 字节字段加密钥 base64）。返回 "OK"/"ERR:..."。

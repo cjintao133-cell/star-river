@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // 会话/消息仓储错误。

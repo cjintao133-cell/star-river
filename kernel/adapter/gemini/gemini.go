@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/core/types"
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // Usage token 用量（T-M3-07 统计数据源）。与 openai 适配器同名，便于上层统一映射。

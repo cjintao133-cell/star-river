@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"star-river/kernel/backup"
+	"github.com/cjintao133-cell/star-river/kernel/backup"
 )
 
 // BackupExport 导出当前库为备份归档字节（zip）。无内核或失败返回 nil。

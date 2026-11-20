@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // 本文件为 T-M1-04 补测：只补真行为/真失败分支（version 默认回退、joinSystem 组合、

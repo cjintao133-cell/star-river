@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/bus"
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/bus"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // fakeCaller 按端点名脚本化行为，记录调用顺序（并发安全）。

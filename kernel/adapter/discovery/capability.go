@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // ChannelKey 能力台账的渠道键："同一 base_url + model 视为独立渠道"（增补 P2）。

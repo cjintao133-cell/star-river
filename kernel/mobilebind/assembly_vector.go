@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/core/types"
-	"star-river/kernel/native/vector"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/native/vector"
 )
 
 const metaVecKey = "vector.state.v1"

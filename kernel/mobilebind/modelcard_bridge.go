@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/adapter/discovery"
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/adapter/probe"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/discovery"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/probe"
 )
 
 // modelMetaDTO UI 传来的模型元数据（来自 /models 富字段）。

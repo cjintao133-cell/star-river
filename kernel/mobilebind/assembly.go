@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"star-river/kernel/endocrine"
-	"star-river/kernel/hippocampus"
-	"star-river/kernel/store"
-	"star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/endocrine"
+	"github.com/cjintao133-cell/star-river/kernel/hippocampus"
+	"github.com/cjintao133-cell/star-river/kernel/store"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
 )
 
 const (

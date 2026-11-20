@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 // T-M7-01 年测（情绪）：365 天衰减 + 每日交互全推演，验证状态有界（维度数恒定、值域内、无 NaN）。

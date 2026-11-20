@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 func TestMemoryStorePutGet(t *testing.T) {

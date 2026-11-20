@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // MaxUserChars：超长用户输入被截断到上限（不可裁层也要有封顶）。

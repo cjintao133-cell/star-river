@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
 )
 
 // SearchToolName tool_search 元工具名。

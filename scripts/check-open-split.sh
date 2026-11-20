@@ -8,22 +8,22 @@
 # 用法：sh scripts/check-open-split.sh
 set -e
 
-CLOSED="star-river/kernel/hippocampus
-star-river/kernel/endocrine
-star-river/kernel/proactive"
+CLOSED="github.com/cjintao133-cell/star-river/kernel/hippocampus
+github.com/cjintao133-cell/star-river/kernel/endocrine
+github.com/cjintao133-cell/star-river/kernel/proactive"
 
 # 底座包清单（可按发布时口径增删）。
-OPEN="star-river/kernel/core/types
-star-river/kernel/core/clock
-star-river/kernel/bus
-star-river/kernel/adapter/openai
-star-river/kernel/adapter/anthropic
-star-river/kernel/adapter/gemini
-star-river/kernel/adapter/discovery
-star-river/kernel/adapter/router
-star-river/kernel/cards
-star-river/kernel/tool
-star-river/kernel/orchestrator"
+OPEN="github.com/cjintao133-cell/star-river/kernel/core/types
+github.com/cjintao133-cell/star-river/kernel/core/clock
+github.com/cjintao133-cell/star-river/kernel/bus
+github.com/cjintao133-cell/star-river/kernel/adapter/openai
+github.com/cjintao133-cell/star-river/kernel/adapter/anthropic
+github.com/cjintao133-cell/star-river/kernel/adapter/gemini
+github.com/cjintao133-cell/star-river/kernel/adapter/discovery
+github.com/cjintao133-cell/star-river/kernel/adapter/router
+github.com/cjintao133-cell/star-river/kernel/cards
+github.com/cjintao133-cell/star-river/kernel/tool
+github.com/cjintao133-cell/star-river/kernel/orchestrator"
 
 echo "== 1) 底座包单独编译 =="
 # shellcheck disable=SC2086

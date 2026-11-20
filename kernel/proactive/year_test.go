@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 // T-M7-01 年测（主动）：365 天三类触发源全推演，验证无状态爆炸——

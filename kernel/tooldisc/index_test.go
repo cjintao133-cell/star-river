@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"star-river/kernel/store"
-	"star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/store"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
 )
 
 func newStore(t *testing.T) *store.Store {

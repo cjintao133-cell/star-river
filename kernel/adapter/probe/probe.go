@@ -8,7 +8,7 @@ package probe
 import (
 	"context"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // Signal 一次探测得到的原始信号。

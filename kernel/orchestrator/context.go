@@ -1,6 +1,6 @@
 package orchestrator
 
-import "star-river/kernel/core/types"
+import "github.com/cjintao133-cell/star-river/kernel/core/types"
 
 // Limits 最小上下文预算。<=0 表示该项不限制。
 type Limits struct {

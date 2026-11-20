@@ -12,7 +12,7 @@ package main
 */
 import "C"
 
-import "star-river/kernel/mobilebind"
+import "github.com/cjintao133-cell/star-river/kernel/mobilebind"
 
 // 内存契约：SrVersion/SrEcho/SrDeviceProfile 返回 C.CString（malloc），调用方负责 free；
 // 入参 char* 由调用方持有，Go 侧 C.GoString 拷贝，不释放入参。

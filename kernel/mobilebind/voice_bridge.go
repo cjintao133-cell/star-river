@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"star-river/kernel/voice"
+	"github.com/cjintao133-cell/star-river/kernel/voice"
 )
 
 // SttTranscribe 语音识别：audioBase64 为音频字节 base64。返回 JSON {"text","language"}；

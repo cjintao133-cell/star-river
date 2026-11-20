@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 // 错误。

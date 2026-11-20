@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"star-river/kernel/tool"
+	"github.com/cjintao133-cell/star-river/kernel/tool"
 )
 
 func TestSearXNGSearch(t *testing.T) {

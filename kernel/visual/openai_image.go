@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // defaultImageHTTPTimeout 默认 HTTP 超时。

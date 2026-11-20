@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"star-river/kernel/adapter/router"
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/router"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // T-M3-07 闭环：StatsRepo 写入真统计 → 适配 StatsProvider → router 按统计排序/标灰。

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 func approx(a, b, eps float64) bool { return math.Abs(a-b) <= eps }

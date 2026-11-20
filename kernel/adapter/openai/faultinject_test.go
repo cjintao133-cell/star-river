@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // T-M7-03 异常注入矩阵（内核侧）：断网 / 模型超时 / key 失效 / 余额不足 / 返回格式错误 五场景，

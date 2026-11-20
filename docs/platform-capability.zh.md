@@ -1,7 +1,7 @@
 
 ## 内容合规差异（T-M7-09，双 flavor）
 
-同一代码库，两个 SKU 靠构建参数区分（不 fork），由 `-ldflags "-X star-river/kernel/compliance.currentFlavor=<flavor>"` 选择；默认 `international`。
+同一代码库，两个 SKU 靠构建参数区分（不 fork），由 `-ldflags "-X github.com/cjintao133-cell/star-river/kernel/compliance.currentFlavor=<flavor>"` 选择；默认 `international`。
 
 | 维度 | international（海外，默认） | domestic（国内） |
 |---|---|---|

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 func TestChatP1AndP3Degrade(t *testing.T) {

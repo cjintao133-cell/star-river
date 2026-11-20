@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // 本文件为 T-M1-03 补测：只补真失败分支（坏输入 / 端点畸形 tool_call），非凑覆盖率。

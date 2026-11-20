@@ -6,7 +6,7 @@
 //
 // 选择 flavor：构建期用 -ldflags 注入，例如：
 //
-//	go build -ldflags "-X star-river/kernel/compliance.currentFlavor=domestic" ...
+//	go build -ldflags "-X github.com/cjintao133-cell/star-river/kernel/compliance.currentFlavor=domestic" ...
 //	不注入则为 international（默认）。
 //
 // 本包只提供**默认策略配置**与判定（内核可测）；「举报入口 UI 可达」与「双 SKU 真实构建产出」

@@ -3,7 +3,7 @@
 ## Content-compliance flavors (dual SKU)
 
 The same codebase produces two SKUs via a build parameter (no fork), selected by
-`-ldflags "-X star-river/kernel/compliance.currentFlavor=<flavor>"`; default `international`.
+`-ldflags "-X github.com/cjintao133-cell/star-river/kernel/compliance.currentFlavor=<flavor>"`; default `international`.
 
 | Dimension | international (default) | domestic |
 |---|---|---|

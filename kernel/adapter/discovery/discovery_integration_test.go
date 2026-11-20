@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
 )
 
 // 集成：真实 openai.Client.Models() 打到 httptest 的 /models，经 Lister 适配进 discovery，

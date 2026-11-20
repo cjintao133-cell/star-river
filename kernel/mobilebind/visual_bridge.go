@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"star-river/kernel/visual"
+	"github.com/cjintao133-cell/star-river/kernel/visual"
 )
 
 var (

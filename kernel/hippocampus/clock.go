@@ -15,7 +15,7 @@ package hippocampus
 import (
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 // Clock / RealClock / FakeClock 复用内核统一时钟（T-M3-06）。

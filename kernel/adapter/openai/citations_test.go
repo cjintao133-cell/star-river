@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // 非流式：message.annotations 里带 url_citation，应解析进 ChatResult.Sources。

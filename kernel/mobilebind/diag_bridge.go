@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"star-river/kernel/diag"
+	"github.com/cjintao133-cell/star-river/kernel/diag"
 )
 
 var dumpsDir string

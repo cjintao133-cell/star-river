@@ -12,7 +12,7 @@ package orchestrator
 //   - 截断前强制记忆沉淀：被裁掉的近期消息经 MemorySink 交给 hippocampus 落库，
 //     不静默丢失（滚动摘要 + 强制沉淀的接线点）。
 
-import "star-river/kernel/core/types"
+import "github.com/cjintao133-cell/star-river/kernel/core/types"
 
 // Layer 上下文层。
 type Layer int

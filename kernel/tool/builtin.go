@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // —— 内置工具（T-M6-03）——

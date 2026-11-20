@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"star-river/kernel/secret"
+	"github.com/cjintao133-cell/star-river/kernel/secret"
 )
 
 func newCipher(t *testing.T) *FieldCipher {

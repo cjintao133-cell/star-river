@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/search"
+	"github.com/cjintao133-cell/star-river/kernel/search"
 )
 
 // searchResult 回传 UI 的搜索结果条目。

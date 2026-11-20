@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 func cptr() *clock.FakeClock { return clock.NewFakeClock(clock.RealClock{}.Now()) }

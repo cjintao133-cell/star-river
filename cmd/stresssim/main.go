@@ -13,13 +13,13 @@ import (
 	"sync"
 	"time"
 
-	"star-river/kernel/bus"
-	"star-river/kernel/core/clock"
-	"star-river/kernel/core/types"
-	"star-river/kernel/endocrine"
-	"star-river/kernel/hippocampus"
-	"star-river/kernel/native/vector"
-	"star-river/kernel/proactive"
+	"github.com/cjintao133-cell/star-river/kernel/bus"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/endocrine"
+	"github.com/cjintao133-cell/star-river/kernel/hippocampus"
+	"github.com/cjintao133-cell/star-river/kernel/native/vector"
+	"github.com/cjintao133-cell/star-river/kernel/proactive"
 )
 
 func rssKB() int {

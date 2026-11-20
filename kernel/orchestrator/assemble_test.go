@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 func txtMsg(role types.Role, s string) types.Message {

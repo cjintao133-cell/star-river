@@ -7,7 +7,7 @@ package mobilebind
 import (
 	"encoding/json"
 
-	"star-river/kernel/native/bridge"
+	"github.com/cjintao133-cell/star-river/kernel/native/bridge"
 )
 
 type devicePolicy struct {

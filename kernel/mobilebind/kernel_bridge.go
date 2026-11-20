@@ -13,8 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"star-river/kernel/core/types"
-	"star-river/kernel/store"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/store"
 )
 
 var (

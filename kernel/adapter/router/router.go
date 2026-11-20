@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // PriceTier 价格档。数值越大越贵，用于"备用不得高于主"约束。

@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/core/types"
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // Usage token 用量（P4 / T-M3-07 统计数据源）。

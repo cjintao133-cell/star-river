@@ -8,7 +8,7 @@ package mobilebind
 import (
 	"encoding/json"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // evolutionEvent 一条演进事件（来自 bus 门铃）。

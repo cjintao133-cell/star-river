@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/core/types"
-	"star-river/kernel/mobilebind"
-	"star-river/kernel/visual"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/mobilebind"
+	"github.com/cjintao133-cell/star-river/kernel/visual"
 )
 
 var gBackend, gDialect string

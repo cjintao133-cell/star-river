@@ -5,7 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // ErrClosed 在总线关闭后由 Subscribe/Publish 返回。

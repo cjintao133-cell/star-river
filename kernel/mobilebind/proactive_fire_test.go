@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/endocrine"
-	"star-river/kernel/proactive"
+	"github.com/cjintao133-cell/star-river/kernel/endocrine"
+	"github.com/cjintao133-cell/star-river/kernel/proactive"
 )
 
 func TestProactiveEmotionFires(t *testing.T) {

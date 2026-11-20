@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // maxBodyBytes 单次响应体读取上限（JSON 分支）。

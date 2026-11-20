@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 func fakeAt(h, mi int) *clock.FakeClock {

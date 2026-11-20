@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 func TestCollectWebResults(t *testing.T) {

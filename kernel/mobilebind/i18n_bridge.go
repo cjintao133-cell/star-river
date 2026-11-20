@@ -6,7 +6,7 @@ package mobilebind
 import (
 	"sync"
 
-	"star-river/kernel/i18n"
+	"github.com/cjintao133-cell/star-river/kernel/i18n"
 )
 
 var (

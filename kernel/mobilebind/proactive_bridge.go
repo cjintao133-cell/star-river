@@ -10,9 +10,9 @@ import (
 	"encoding/json"
 	"sync"
 
-	"star-river/kernel/core/clock"
-	"star-river/kernel/hippocampus"
-	"star-river/kernel/proactive"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/hippocampus"
+	"github.com/cjintao133-cell/star-river/kernel/proactive"
 )
 
 const metaProactiveKey = "proactive.snapshot.v1"

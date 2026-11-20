@@ -10,8 +10,8 @@ import (
 	"errors"
 	"strings"
 
-	"star-river/kernel/adapter/openai"
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // ProbeResult 端点探测结果（JSON 序列化给 UI）。

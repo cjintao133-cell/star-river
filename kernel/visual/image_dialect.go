@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"strings"
 
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // Img2ImgMode img2img 走法。

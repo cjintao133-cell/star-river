@@ -6,7 +6,7 @@ package mobilebind
 import (
 	"encoding/json"
 
-	"star-river/kernel/compliance"
+	"github.com/cjintao133-cell/star-river/kernel/compliance"
 )
 
 // CompliancePolicy 返回当前内容策略 JSON。

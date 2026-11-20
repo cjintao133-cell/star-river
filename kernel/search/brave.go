@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"star-river/kernel/netx"
+	"github.com/cjintao133-cell/star-river/kernel/netx"
 )
 
 // BraveProvider Brave Search API 适配器（GET /res/v1/web/search）。

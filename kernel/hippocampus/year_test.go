@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"star-river/kernel/core/clock"
+	"github.com/cjintao133-cell/star-river/kernel/core/clock"
 )
 
 // T-M7-01 年测（记忆）：365 天衰减/复习全推演，验证无状态爆炸（存储增长有界）。

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
 )
 
 // AppendMessage 的会话 updated_at 必须取 MAX(旧,新)，不允许倒调（astra 评审：两次独立提交+倒调）。

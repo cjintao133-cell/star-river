@@ -12,10 +12,10 @@ import (
 	"fmt"
 	"time"
 
-	"star-river/kernel/bus"
-	"star-river/kernel/core/types"
-	"star-river/kernel/endocrine"
-	"star-river/kernel/hippocampus"
+	"github.com/cjintao133-cell/star-river/kernel/bus"
+	"github.com/cjintao133-cell/star-river/kernel/core/types"
+	"github.com/cjintao133-cell/star-river/kernel/endocrine"
+	"github.com/cjintao133-cell/star-river/kernel/hippocampus"
 )
 
 func main() {
