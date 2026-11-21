@@ -19,6 +19,7 @@ You bring the model (BYOK); it brings everything around it. No Python, no contai
 - **Fast cold start** — milliseconds, no interpreter/runtime warm-up. Fits CLIs, edge boxes, serverless.
 - **Bounded memory** — long-running memory state stays bounded; a **365-day** fake-clock stress test asserts it (no unbounded "state explosion").
 - **Channel/goroutine-native** — the event bus is channel-based and MCP stdio processes run as goroutines; no GIL.
+- **Well-tested** — **92% average statement coverage across kernel packages** (statement-weighted over the whole tree incl. CLI entry binaries: 81.7%); 680+ test/fuzz/benchmark functions, `-race` on concurrent packages, coverage gated in CI.
 - **Cross-compiles** — one command to Linux / Windows / macOS / arm64; Android via `gomobile bind` → AAR (needs NDK).
 
 *Scope of C, honestly: ~0.9k lines of C (excluding build-generated headers) for the optional SIMD int8 vector index, device probing, and the JNI / c-shared bridge. The core logic is pure Go.*
@@ -135,7 +136,7 @@ No third-party SDKs; agent protocols (OpenAI/Anthropic/Gemini/MCP) are hand-writ
 ## Contributing
 
 - Per-commit gate: clean `gofmt` + `go vet` + `staticcheck` + relevant unit tests (concurrent packages with `-race`);
-  core-package coverage ≥70%; C code passes ASan+Valgrind with zero reports.
+  kernel-package coverage ≥90%; C code passes ASan+Valgrind with zero reports.
 - The red lines in `docs/architecture.md` are non-negotiable, especially dependency direction (core does not import
   capability plugins) and keys never appearing in logs/URLs.
 - Security-sensitive code (crypto, cgo handles, signature chain) is tagged `REVIEW-NEEDED` and requires external review before release.

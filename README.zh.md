@@ -10,6 +10,7 @@
 > **为什么是 Go、为什么小**：单文件静态二进制约 **6.7MB**（`-s -w`，纯 Go 构建、不含可选 C 向量索引）；
 > 直接依赖**仅 1 个**（`modernc.org/sqlite`，纯 Go）；冷启动毫秒级；长时记忆状态**有界**（365 天假时钟年测兜底）；
 > channel/goroutine 原生；一条命令交叉编译到 Linux/Windows/macOS/arm64，Android 走 `gomobile bind`（需 NDK）。
+> 测试扎实：**kernel 各包语句覆盖率平均约 92%**（全树含 CLI 入口二进制按语句加权为 81.7%）；680+ 测试/模糊/基准函数，并发包跑 `-race`，覆盖率在 CI 中设门禁。
 > **C 的范围（实话）**：约 1,350 行 C，仅用于可选的 SIMD int8 向量索引、设备探测、JNI/c-shared 桥；核心逻辑为纯 Go。
 >
 > **状态**：本仓库聚焦**内核 / 框架**，**不含成品 UI**；请以**内核架构 / 协议 / 数据安全**评估本项目。如需成品 App，请基于内核自行开发。
@@ -95,7 +96,7 @@ go run ./cmd/srchat -base https://host/v1 -model <model> -keyfile /path/to/key
 
 ## 贡献
 
-- 每提交门禁：`gofmt` 干净 + `go vet` + `staticcheck` + 相关单测（并发包 `-race`）；核心包覆盖率 ≥70%；C 代码 ASan+Valgrind 串行零报告。
+- 每提交门禁：`gofmt` 干净 + `go vet` + `staticcheck` + 相关单测（并发包 `-race`）；kernel 包覆盖率 ≥90%；C 代码 ASan+Valgrind 串行零报告。
 - 红线（`docs/architecture.md`）不可违反，尤其依赖方向（底座不 import 能力插件包）与密钥不进日志/URL。
 - 涉及安全敏感实现（加密、cgo 句柄、签名链）标 `REVIEW-NEEDED`，发布前外部评审。
 

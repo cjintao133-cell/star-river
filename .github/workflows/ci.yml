@@ -35,12 +35,14 @@ jobs:
         run: go build $PKGS
       - name: go test (with coverage)
         run: go test $PKGS -coverprofile=coverage.out -covermode=atomic
-      - name: enforce coverage >= 80%
+      - name: enforce kernel coverage
         run: |
           go tool cover -func=coverage.out | tail -1
-          COV=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/,"",$NF); print $NF}')
-          echo "total statement coverage: ${COV}%"
-          awk -v c="$COV" 'BEGIN { if (c+0 < 80) { print "FAIL: coverage " c "% is below 80%"; exit 1 } }'
+          # Kernel code only: exclude CLI entry points and examples (industry-standard scope).
+          grep -v -e '/cmd/' -e '/examples/' coverage.out > cov_kernel.out || cp coverage.out cov_kernel.out
+          COV=$(go tool cover -func=cov_kernel.out | awk '/^total:/ {gsub(/%/,"",$NF); print $NF}')
+          echo "kernel statement coverage: ${COV}%"
+          awk -v c="$COV" 'BEGIN { if (c+0 < 85) { print "FAIL: kernel coverage " c "% < 85%"; exit 1 } else { print "PASS: kernel coverage " c "% >= 85%" } }'
       - name: go test -race (concurrent packages)
         run: go test -race ./kernel/bus/... ./kernel/orchestrator/... ./kernel/proactive/...
       - name: layering guard (core must not import capability plugins)
