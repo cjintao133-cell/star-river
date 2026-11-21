@@ -126,6 +126,20 @@ Nothing outside the `docs/architecture.md` dependency list may be introduced. Cu
 standard library first; `modernc.org/sqlite` (pure-Go SQLite, no cgo); `golang.org/x/mobile` (build chain).
 No third-party SDKs; agent protocols (OpenAI/Anthropic/Gemini/MCP) are hand-written.
 
+## How this was built (honest note on AI use)
+
+This project was built with an AI coding assistant as a pair-programmer — and a lot of human
+debugging. About a month of design → implement → break → fix, iterating one problem at a time.
+
+The AI helped write code. What it did **not** do: the architecture decisions, the days spent chasing
+cgo pointer bugs across the Go↔C boundary, the 16,407 lines of tests, the 87% package coverage, the
+year-scale (365-day, fake-clock) stress tests, or fighting the CI from red to green. That part is in the
+commit log, in the order it broke and got fixed — read it.
+
+I'm stating this up front on purpose: r/golang now (rightly) asks projects to be clear about how much AI
+was used, and hiding it would be the real red flag. So judge this by what it does and how it's tested —
+`go run ./examples/hello-kernel`, then read the tests.
+
 ## Contributing
 
 - Per-commit gate: clean `gofmt` + `go vet` + `staticcheck` + relevant unit tests (concurrent packages with `-race`);
