@@ -19,7 +19,7 @@ go test ./kernel/...  # concurrent packages: go test -race
 sh scripts/check-open-split.sh   # layering guard (core must not import capability plugins)
 ```
 
-- Core-package coverage target ≥ 70%.
+- Core-package statement coverage: kernel packages ≥ 85% (statement-weighted, excluding cmd/ and examples/; CI-enforced); whole-tree ≥ 80%; kernel per-package average ~92%.
 - C code: must pass ASan + Valgrind with zero reports (`native/`).
 
 ## Red lines (non-negotiable)
@@ -54,6 +54,6 @@ Conventional-ish: `feat(scope): ...`, `fix(scope): ...`, `docs: ...`, `chore: ..
 
 - **New major functionality MUST ship with automated tests** added to the test suite in the same PR.
 - **Every fixed bug MUST include a regression test** where practical.
-- **Statement coverage MUST stay at or above 80%** project-wide; CI measures coverage on every
-  check-in and fails below threshold. C hot paths are covered by the ASan/Valgrind gate.
+- **Whole-tree statement coverage MUST stay at or above 80%**, and the kernel statement-weighted gate
+  (**≥ 85%**) is enforced by CI on every check-in. C hot paths are covered by the ASan/Valgrind gate.
 - Proposed changes that lack tests for new functionality are not merged.
