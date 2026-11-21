@@ -204,7 +204,7 @@
   "regression_tests_added50_status": "N/A",
   "regression_tests_added50_justification": "No bugs fixed in last six months; policy requires regression tests. See https://github.com/cjintao133-cell/star-river/blob/main/CONTRIBUTING.md",
   "test_statement_coverage80_status": "Met",
-  "test_statement_coverage80_justification": "CI enforces >=80% coverage (81.4%). See https://github.com/cjintao133-cell/star-river/blob/main/.github/workflows/ci.yml",
+  "test_statement_coverage80_justification": "CI runs go test with -coverprofile and enforces kernel-package statement coverage >=85% (statement-weighted, excluding cmd/ and examples/ entry binaries). Measured 2026-11-21: whole-tree statement coverage 81.7% (7615 statements, incl. CLI entry binaries), kernel statements weighted 87.8%, kernel per-package average 92.4%. See https://github.com/cjintao133-cell/star-river/blob/main/.github/workflows/ci.yml",
   "test_policy_mandated_status": "Met",
   "test_policy_mandated_justification": "Written policy: tests for new functionality. See https://github.com/cjintao133-cell/star-river/blob/main/CONTRIBUTING.md",
   "implement_secure_design_status": "Met",
