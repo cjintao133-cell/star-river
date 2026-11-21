@@ -96,7 +96,7 @@ go run ./cmd/srchat -base https://host/v1 -model <model> -keyfile /path/to/key
 
 ## 贡献
 
-- 每提交门禁：`gofmt` 干净 + `go vet` + `staticcheck` + 相关单测（并发包 `-race`）；kernel 包覆盖率 ≥90%；C 代码 ASan+Valgrind 串行零报告。
+- 每提交门禁：`gofmt` 干净 + `go vet` + `staticcheck` + 相关单测（并发包 `-race`）；kernel 包语句加权覆盖率 ≥85%（CI 门禁；包平均约 92%）；C 代码 ASan+Valgrind 串行零报告。
 - 红线（`docs/architecture.md`）不可违反，尤其依赖方向（底座不 import 能力插件包）与密钥不进日志/URL。
 - 涉及安全敏感实现（加密、cgo 句柄、签名链）标 `REVIEW-NEEDED`，发布前外部评审。
 

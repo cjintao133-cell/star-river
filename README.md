@@ -136,7 +136,7 @@ No third-party SDKs; agent protocols (OpenAI/Anthropic/Gemini/MCP) are hand-writ
 ## Contributing
 
 - Per-commit gate: clean `gofmt` + `go vet` + `staticcheck` + relevant unit tests (concurrent packages with `-race`);
-  kernel-package coverage ≥90%; C code passes ASan+Valgrind with zero reports.
+  kernel-package statement-weighted coverage ≥85% (CI-enforced; per-package average ~92%); C code passes ASan+Valgrind with zero reports.
 - The red lines in `docs/architecture.md` are non-negotiable, especially dependency direction (core does not import
   capability plugins) and keys never appearing in logs/URLs.
 - Security-sensitive code (crypto, cgo handles, signature chain) is tagged `REVIEW-NEEDED` and requires external review before release.
