@@ -4,7 +4,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/cjintao133-cell/star-river.svg)](https://pkg.go.dev/github.com/cjintao133-cell/star-river)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.26.11+-00ADD8.svg)](go.mod)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16960/badge)](https://www.bestpractices.dev/projects/16960)
+[![OpenSSF Best Practices — Silver](https://www.bestpractices.dev/projects/16960/badge)](https://www.bestpractices.dev/projects/16960)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cjintao133-cell/star-river/badge)](https://scorecard.dev/viewer/?uri=github.com/cjintao133-cell/star-river)
 
 **A runtime for AI apps — not another AI app.**
