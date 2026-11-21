@@ -9,13 +9,21 @@
 
 ![hello-kernel demo](docs/assets/hello-kernel.svg)
 
-> **An embeddable AI-assistant kernel** — Go + C, for Android and Windows.
-> It packages context assembly, memory, emotion, proactivity, tools/MCP, multimodal adapters and encrypted
-> local storage into a kernel you can drop into your own app. **Inference is BYOK** (cloud or local models).
-> No own backend, no telemetry.
+**Drop an AI brain into your Go app — no Python, no 2 GB image, no leaky abstractions.**
+
+> **An embeddable AI-assistant kernel** — pure Go (a sliver of C only for the optional SIMD vector index),
+> for Android, Windows, Linux and edge. It packages context assembly, memory, emotion, proactivity,
+> tools/MCP, multimodal adapters and encrypted local storage into a kernel you import into your own app.
+> **Inference is BYOK** (cloud or local models). No backend of ours, no telemetry.
 >
 > **It does not run model weights — it owns the layer *around* the model, *inside* your app.**
 > Memory / emotion / proactivity are pluggable capabilities, not its definition.
+
+```
+Production code: 19,562 LOC · 32 packages · tests: 16,407 LOC
+Direct dependency: 1 (modernc.org/sqlite, pure Go) · License: Apache-2.0
+Single static binary: ~6.7 MB (linux/amd64 -ldflags "-s -w"; 6.25 MB arm64), CGO_ENABLED=0
+```
 
 > **Status**: this repo focuses on the **core / framework**. The Android & desktop **UI has been moved out of
 > the main tree** (reference implementation, WIP); retrieve it via the `with-ui` branch or `pre-ui-strip` tag.
