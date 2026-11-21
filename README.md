@@ -7,25 +7,39 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16960/badge)](https://www.bestpractices.dev/projects/16960)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cjintao133-cell/star-river/badge)](https://scorecard.dev/viewer/?uri=github.com/cjintao133-cell/star-river)
 
-![hello-kernel demo](docs/assets/hello-kernel.svg)
+**A runtime for AI apps — not another AI app.**
 
-> **An embeddable AI-assistant kernel** — Go + C, for Android and Windows.
-> It packages context assembly, memory, emotion, proactivity, tools/MCP, multimodal adapters and encrypted
-> local storage into a kernel you can drop into your own app. **Inference is BYOK** (cloud or local models).
-> No own backend, no telemetry.
->
+Star River is an embeddable kernel in Go — a pure-Go core, plus one small optional C module (a SIMD int8 vector index). It owns the layer *around* the model — context assembly,
+memory, emotion, tools/MCP, multimodal adapters, encrypted local storage — so your app doesn't have to.
+You bring the model (BYOK); it brings everything around it. No Python, no container, no backend of ours, no telemetry.
+
+**Why Go, and why small:**
+
+- **Small & self-contained** — ~19.5k LOC Go; a single static binary at **~6.7 MB** (`-ldflags "-s -w"`, pure-Go build without the optional C vector index). **One** direct dependency (`modernc.org/sqlite`, pure Go) — no interpreter, no venv, no 2 GB image.
+- **Fast cold start** — milliseconds, no interpreter/runtime warm-up. Fits CLIs, edge boxes, serverless.
+- **Bounded memory** — long-running memory state stays bounded; a **365-day** fake-clock stress test asserts it (no unbounded "state explosion").
+- **Channel/goroutine-native** — the event bus is channel-based and MCP stdio processes run as goroutines; no GIL.
+- **Cross-compiles** — one command to Linux / Windows / macOS / arm64; Android via `gomobile bind` → AAR (needs NDK).
+
+*Scope of C, honestly: ~1,350 lines of C for the optional SIMD int8 vector index, device probing, and the JNI / c-shared bridge. The core logic is pure Go.*
+
+```go
+import (
+    "github.com/cjintao133-cell/star-river/kernel/hippocampus"
+    "github.com/cjintao133-cell/star-river/kernel/endocrine"
+)
+mem := hippocampus.New(hippocampus.Options{})   // forgetting-curve memory
+emo := endocrine.New(nil, nil)                  // pluggable 5-D emotion
+mem.Encode("m1", "user prefers Go", 0.9, 0.7)  // remember (text, importance, emotion)
+```
+
 > **It does not run model weights — it owns the layer *around* the model, *inside* your app.**
 > Memory / emotion / proactivity are pluggable capabilities, not its definition.
 
-> **Status**: this repo focuses on the **core / framework**. The Android & desktop **UI has been moved out of
-> the main tree** (reference implementation, WIP); retrieve it via the `with-ui` branch or `pre-ui-strip` tag.
-> Please evaluate the project by its **kernel architecture / protocols / data security**.
+> **Status**: this repo focuses on the **core / framework**. The Android & desktop **UI lives out of the
+> main tree** (reference implementation, WIP). Evaluate the project by its **kernel architecture / protocols / data security**.
 
 > Docs: [Product](./docs/product-brief.md) · [Features](./docs/features.md) · [Usage](./docs/usage.md) · [FAQ](./docs/faq.md) · [Troubleshooting](./docs/troubleshooting.md) — 中文文档见 [README.zh.md](./README.zh.md) / `docs/*.zh.md`
-
-Star River Microkernel is an **embeddable AI-assistant kernel**: a general core + pluggable "capability
-plugin" packs (Ebbinghaus memory / five-dimensional emotion / proactive scheduling). The core stays clean,
-compiles on its own, and is open source; persona and emotional behavior live in plugins, not in the kernel's identity.
 
 ## See it work (offline, ~5 seconds, no key)
 
@@ -85,7 +99,7 @@ star-river/
 
 ## Quick start
 
-Prerequisites: **Go 1.26.11+** (see `go.mod`), a C toolchain; for Android also NDK r26+/JDK17/Gradle 8.9.
+Prerequisites: **Go 1.26.11+**. The pure-Go packages (`bus`, memory, emotion, `orchestrator`, `cards`, `store`, …) build with `CGO_ENABLED=0` — **no C toolchain required**. A C toolchain is only needed for the full `./...` build and the optional native modules (SIMD vector index, desktop JNI bridge); Android `gomobile bind` also needs NDK r26+/JDK17/Gradle 8.9.
 
 ```sh
 # Full gate (build / vet / race tests)
