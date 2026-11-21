@@ -9,7 +9,7 @@
 
 | 问题 | 原因 | 解决方案 |
 |---|---|---|
-| `go build` 报工具链版本错 | `go.mod` 要求 **Go 1.26.0** | 升级到 Go ≥1.26；不降 `go.mod`（用了新特性） |
+| `go build` 报工具链版本错 | `go.mod` 要求 **Go 1.26.11** | 升级到 Go ≥1.26；不降 `go.mod`（用了新特性） |
 | `go test -race ./...` 慢或超时 | 并发包竞态检测开销大 | 只对并发包加 `-race`（bus/orchestrator/proactive），或调大超时 |
 | C 相关报错 / `make -f native/Makefile` 失败 | 缺 C 工具链 | 装 `gcc`/`clang`；不构建 native 时纯 Go 部分可单独跑 |
 | `staticcheck` 未找到 | 未安装 | `go install honnef.co/go/tools/cmd/staticcheck@latest`（CI 里另行安装） |

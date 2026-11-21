@@ -6,7 +6,7 @@ Two different goals, two different levers. Do **A** to be *found*, **B** to be *
 
 ## A. Be found (distribution)
 
-### 1. GitHub repo setup (see `docs/release-process` for the push)
+### 1. GitHub repo setup (push the repo yourself)
 - **Description** (one line, English): `Embeddable AI-assistant kernel in Go+C: context assembly, memory, emotion, tools/MCP, multimodal, encrypted local storage. BYOK, zero backend.`
 - **Topics** (Settings → Topics) — pick ~10:
   `ai`, `llm`, `golang`, `local-first`, `on-device`, `memory`, `ai-agents`, `mcp`, `embeddable`, `privacy`
@@ -27,7 +27,7 @@ Open a PR to add the repo under the right section of each (read each list's CONT
 - **Hacker News**: "Show HN: Star River Microkernel – embeddable AI-assistant kernel (Go+C, local-first)" — post the 5s demo + honest boundaries.
 - **Reddit**: r/LocalLLaMA, r/golang, r/SideProject, r/opensource.
 - **V2EX / 即刻 / 少数派** (中文圈).
-- Lead with the **demo**, then the **honest positioning** ("not a runtime, not a memory add-on — an embeddable kernel"), then ask for feedback.
+- Lead with the **demo**, then the **honest positioning** ("not an inference runtime that runs model weights — an embeddable kernel for the layer around your model"), then ask for feedback.
 
 ### 4. Make the "first 3 seconds" count
 - The README top: one line + the 5s demo. (Done.)

@@ -51,7 +51,7 @@ The **main line is the kernel itself, without a plugin system**. (A plugin contr
 The "core must not import capability plugins" rule is only an engineering **layering** constraint, unrelated to licensing.
 
 ## Q12: How to report / contribute?
-After release, GitHub Issues / Discussions are the single feedback entry (see the release-process doc). For kernel issues,
+After release, GitHub Issues / Discussions are the single feedback entry. For kernel issues,
 attach `go build ./...`, `go vet ./...` output and repro steps.
 
 ## Q13: Why no UI, and why so much code?

@@ -4,7 +4,7 @@
 
 ## 0. 环境前置
 
-- **Go**：`go.mod` 要求 **go 1.26.0**（务必用 ≥1.26 的工具链；旧版本会构建失败）。
+- **Go**：`go.mod` 要求 **go 1.26.11**（务必用 ≥1.26 的工具链；旧版本会构建失败）。
 - **C 工具链**：`cc`/`gcc`（构建 `native/` 热点模块；不带 native 时可只跑纯 Go 部分）。
 - 可选：`staticcheck`（静态检查，需自行 `go install golang.org/x/tools/cmd/staticcheck`）。
 - Android 构建额外需要：NDK r26+、JDK17、Gradle 8.9（仅在你要出 AAR 时）。

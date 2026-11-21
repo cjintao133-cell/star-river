@@ -9,7 +9,7 @@
 
 | Issue | Cause | Fix |
 |---|---|---|
-| `go build` toolchain version error | `go.mod` requires **Go 1.26.0** | Upgrade to Go ≥1.26; don't downgrade `go.mod` |
+| `go build` toolchain version error | `go.mod` requires **Go 1.26.11** | Upgrade to Go ≥1.26; don't downgrade `go.mod` |
 | `go test -race ./...` slow/timeout | race detector overhead | Only `-race` the concurrent packages (bus/orchestrator/proactive), or raise timeout |
 | C errors / `make -f native/Makefile` fails | no C toolchain | install `gcc`/`clang`; the pure-Go part runs without native |
 | `staticcheck` not found | not installed | `go install honnef.co/go/tools/cmd/staticcheck@latest` |

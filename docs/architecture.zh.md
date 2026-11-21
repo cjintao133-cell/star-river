@@ -1,9 +1,9 @@
 # 架构与包边界（初版，随 T-M0-03 建立）
 
-正典链：prd/星海微内核开发任务清单.md → prd/增补任务-v1范围.md → docs/blueprint-review.md（12 条硬约束，台账 docs/constraints-12.md）。
+开发以 12 条硬约束为准绳，本文件为对外架构正典（约束与依赖方向见下）。
 
 ## 硬事实
-纯本地、零用户数据上传、BYOK。Go 内核 + C 热点模块 + Kotlin Compose UI。Android 与 Windows 双端；构建矩阵在腾讯云 Linux 交叉编译（docs/env-linux.md）。
+纯本地、零用户数据上传、BYOK。Go 内核 + C 热点模块 + Kotlin Compose UI。Android 与 Windows 双端；构建矩阵在 Linux 上交叉编译（见 README 的 Cross-compiles 说明）。
 
 ## 包边界
 | 包 | 职责 | 许可区 |
@@ -61,6 +61,6 @@
 
 ## T-M0-04 增补（实测后落文）
 - 新包 kernel/mobilebind：gomobile AAR 桥接门面（开源区，薄层，函数签名稳定，内核逻辑不得写在桥层）。PRD 结构表未列，属桥接必需，随 T-M0-04 入表。
-- go.mod：tool golang.org/x/mobile/cmd/gomobile 入账（v0.0.0-20261117202452）；随带间接 x/mod/x/sync/x/tools 为工具链内部用；go 指令抬至 1.26.0（PRD 下限 1.22+ 不违反）。
+- go.mod：tool golang.org/x/mobile/cmd/gomobile 入账（v0.0.0-20261117202452）；随带间接 x/mod/x/sync/x/tools 为工具链内部用；go 指令抬至 1.26.11（PRD 下限 1.22+ 不违反）。
 - 安卓构建链锁定：Gradle 8.9 wrapper + AGP 8.5.2 + Kotlin 2.0.21 + Compose BOM 2024.09.03（仅构建期，不进内核依赖）。
 - 新包 kernel/desktopbind（T-M0-05）：c-shared 桌面出口 + 手写 JNI 桥（jnibridge.c，REVIEW-NEEDED 待评审）+ wininc 最小交叉头；开源区，薄门面复用 mobilebind。
