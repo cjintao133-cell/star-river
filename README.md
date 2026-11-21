@@ -21,7 +21,7 @@ You bring the model (BYOK); it brings everything around it. No Python, no contai
 - **Channel/goroutine-native** — the event bus is channel-based and MCP stdio processes run as goroutines; no GIL.
 - **Cross-compiles** — one command to Linux / Windows / macOS / arm64; Android via `gomobile bind` → AAR (needs NDK).
 
-*Scope of C, honestly: ~1,350 lines of C for the optional SIMD int8 vector index, device probing, and the JNI / c-shared bridge. The core logic is pure Go.*
+*Scope of C, honestly: ~0.9k lines of C (excluding build-generated headers) for the optional SIMD int8 vector index, device probing, and the JNI / c-shared bridge. The core logic is pure Go.*
 
 ```go
 import (

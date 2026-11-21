@@ -24,9 +24,7 @@ local-only with no network capability. See `docs/privacy-boundary.md`.
   Don't claim "production/military-grade encryption" yet.
 
 ## Q6: Is there a UI? Can I just install and chat?
-**The main tree is kernel/framework only — no product UI.** The UI is a reference implementation, moved out of tree (WIP);
-retrieve it from the `with-ui` branch or `pre-ui-strip` tag (unpolished, known interaction bugs). For a finished app, wait
-for the UI or build on the kernel yourself.
+**The main tree is kernel/framework only — no product UI.** No UI is shipped in this release. Build your app on the kernel yourself; a reference UI is not part of this version.
 
 ## Q7: Does it support character cards?
 Yes — four carriers: V1/V2/V3 JSON, chara PNG, charx (zip), world books (keyword activation/recursion/always-on). See `kernel/cards`.
@@ -57,6 +55,6 @@ After release, GitHub Issues / Discussions are the single feedback entry (see th
 attach `go build ./...`, `go vet ./...` output and repro steps.
 
 ## Q13: Why no UI, and why so much code?
-The kernel thickens the foundation "long-term companionship" needs (26 packages, ~19.5k lines Go + C): multi-protocol
+The kernel thickens the foundation "long-term companionship" needs (31 packages, ~19.5k lines Go + C): multi-protocol
 access, encrypted storage, context orchestration, MCP, character cards, memory/emotion/proactivity, vision, C hot paths.
 The UI is just one layer on top and is independently replaceable.

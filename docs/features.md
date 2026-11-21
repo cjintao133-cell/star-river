@@ -4,7 +4,7 @@
 > Positioning: **an embeddable AI-assistant kernel** (Go + C, Android/Windows). It does not run model weights — it owns
 > the layer *around the model, inside the app*: context assembly, memory, emotion, proactivity, tools/MCP, multimodal
 > adapters, encrypted storage, dual-end bridges.
-> Size: Go production ≈ 19.5k lines / 139 files; C/H ≈ 0.9k lines; 26 kernel packages + 3 commands.
+> Size: Go production ≈ 19.5k lines / 140 files; C/H ≈ 0.9k lines; 31 kernel packages + 3 commands.
 
 ---
 

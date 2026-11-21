@@ -68,7 +68,7 @@ Hardened but **not externally audited** (see `KNOWN-ISSUES.md` §1):
 - **Image quality not human-reviewed**: watermark enforced, but real selfie/image-gen aesthetics not manually accepted.
 - **Red lines not fully closed** (partial): delete-overwrite not threaded through all vector/derived data; memory "outbound
   classification" incomplete; endpoint freeze/HTTPS-only full validation pending.
-- **UI not in this repo**: reference impl moved out (WIP), see `with-ui`; not a release-evaluation target.
+- **UI not in this repo**: no UI shipped in this release; not a release-evaluation target.
 
 ## G. General troubleshooting flow
 

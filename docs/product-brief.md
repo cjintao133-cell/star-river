@@ -11,7 +11,7 @@ into a kernel you can drop into your own app.
 
 ## What it is
 
-A microkernel written in **Go + C** (26 kernel packages + C hot paths) that does the foundation for a long-running,
+A microkernel written in **Go + C** (31 kernel packages + C hot paths) that does the foundation for a long-running,
 stateful, pluggable AI assistant:
 
 - **Context engine** (`orchestrator`): 7-layer context assembly + budget allocation + forced memory consolidation before truncation + rolling summary.
@@ -58,5 +58,5 @@ endpoint → data goes there; point it at a local Ollama → fully offline.
 
 ## Size (verifiable)
 
-Go production ≈ 19.5k lines / 139 files; C/H ≈ 0.9k lines; 26 kernel packages + 3 commands.
+Go production ≈ 19.5k lines / 140 files; C/H ≈ 0.9k lines; 31 kernel packages + 3 commands.
 Per-module capabilities: see [`features.md`](./features.md).
