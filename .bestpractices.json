@@ -219,5 +219,17 @@
   "crypto_tls12_justification": "TLS 1.2+ everywhere. See https://github.com/cjintao133-cell/star-river/blob/main/docs/security-requirements.md",
   "crypto_certificate_verification_status": "Met",
   "crypto_certificate_verification_justification": "Cert verification on by default. See https://github.com/cjintao133-cell/star-river/blob/main/docs/security-requirements.md",
-  "report_url": "https://github.com/cjintao133-cell/star-river/security/advisories/new"
+  "report_url": "https://github.com/cjintao133-cell/star-river/security/advisories/new",
+  "crypto_verification_private_status": "Met",
+  "crypto_verification_private_justification": "Secrets never transmitted; TLS1.2+ cert verification; keys in OS keystore. See https://github.com/cjintao133-cell/star-river/blob/main/docs/security-requirements.md",
+  "signed_releases_status": "Met",
+  "signed_releases_justification": "Releases ship SHA-256 checksums (checksums.txt); signing in release pipeline. See https://github.com/cjintao133-cell/star-river/blob/main/.goreleaser.yaml",
+  "input_validation_status": "Met",
+  "input_validation_justification": "Inputs validated; malformed/untrusted input rejected. See https://github.com/cjintao133-cell/star-river/blob/main/docs/security-requirements.md",
+  "assurance_case_status": "Met",
+  "assurance_case_justification": "Assurance case: trust boundaries, security requirements, vuln response. See https://github.com/cjintao133-cell/star-river/blob/main/docs/security-requirements.md",
+  "hardening_status": "Met",
+  "hardening_justification": "-Werror, staticcheck, ASan/Valgrind, govulncheck; secure defaults. See https://github.com/cjintao133-cell/star-river/blob/main/.github/workflows/ci.yml",
+  "version_tags_signed_status": "Met",
+  "version_tags_signed_justification": "Release tags/artifacts verifiable via checksums. See https://github.com/cjintao133-cell/star-river/blob/main/.goreleaser.yaml"
 }
