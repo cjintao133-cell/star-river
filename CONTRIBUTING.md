@@ -39,3 +39,21 @@ sh scripts/check-open-split.sh   # layering guard (core must not import capabili
 ## Commit messages
 
 Conventional-ish: `feat(scope): ...`, `fix(scope): ...`, `docs: ...`, `chore: ...`. Sign off (`-s`).
+
+## Coding standards (explicit)
+
+- **Go:** `gofmt` formatting is mandatory and CI-enforced (`gofmt -l .` must be empty). Static checks
+  `go vet` and `staticcheck` must pass. Follow the idioms in *Effective Go* and the *Go Code Review
+  Comments* guide. Keep packages small and the core thin.
+- **C (native/):** C11, compiled with `-Wall -Wextra -Werror`. Every C path must pass ASan and
+  Valgrind with zero reports (`native/test-c.sh`). Build via `native/Makefile`, which honors
+  `CC`/`CFLAGS`/`LDFLAGS`.
+- CI **automatically enforces** the Go style gate (`gofmt`, `vet`, `staticcheck`) and the C gate.
+
+## Test policy (mandatory)
+
+- **New major functionality MUST ship with automated tests** added to the test suite in the same PR.
+- **Every fixed bug MUST include a regression test** where practical.
+- **Statement coverage MUST stay at or above 80%** project-wide; CI measures coverage on every
+  check-in and fails below threshold. C hot paths are covered by the ASan/Valgrind gate.
+- Proposed changes that lack tests for new functionality are not merged.

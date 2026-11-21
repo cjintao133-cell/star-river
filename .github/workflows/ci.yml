@@ -19,6 +19,11 @@ jobs:
       # Build the Linux libs first. Android/Windows libs need NDK/mingw and are built on those toolchains.
       - name: build native libs (linux)
         run: make -f native/Makefile linux vector-linux
+      - name: C gate (ASan + Valgrind)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y valgrind
+          bash native/test-c.sh
       # kernel/desktopbind (desktop JNI bridge) needs JDK jni.h; built on desktop toolchains, not this Linux CI.
       - name: select packages (exclude desktop JNI bridge)
         run: echo "PKGS=$(go list ./... | grep -v /desktopbind | tr '\n' ' ')" >> "$GITHUB_ENV"
@@ -28,8 +33,14 @@ jobs:
         run: go vet $PKGS
       - name: go build
         run: go build $PKGS
-      - name: go test
-        run: go test $PKGS
+      - name: go test (with coverage)
+        run: go test $PKGS -coverprofile=coverage.out -covermode=atomic
+      - name: enforce coverage >= 80%
+        run: |
+          go tool cover -func=coverage.out | tail -1
+          COV=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/,"",$NF); print $NF}')
+          echo "total statement coverage: ${COV}%"
+          awk -v c="$COV" 'BEGIN { if (c+0 < 80) { print "FAIL: coverage " c "% is below 80%"; exit 1 } }'
       - name: go test -race (concurrent packages)
         run: go test -race ./kernel/bus/... ./kernel/orchestrator/... ./kernel/proactive/...
       - name: layering guard (core must not import capability plugins)

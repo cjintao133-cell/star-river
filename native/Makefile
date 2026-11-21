@@ -2,6 +2,11 @@
 # 用法: make -j4 -f native/Makefile all && make -f native/Makefile symbols
 # 三目标 = PRD 验收清单（android-arm64 / windows-amd64 / linux-amd64），与环境协议构建矩阵一致。
 
+# 尊重调用方工具链：默认 gcc，但若外部传入 CC/CFLAGS/LDFLAGS 则采用并追加（不覆盖）。
+ifeq ($(origin CC),default)
+CC := gcc
+endif
+
 NDK_HOME  ?= /root/android-sdk/ndk/26.3.11579264
 NDK_BIN   := $(NDK_HOME)/toolchains/llvm/prebuilt/linux-x86_64/bin
 NDK_CC    := $(NDK_BIN)/aarch64-linux-android21-clang
@@ -11,7 +16,7 @@ NDK_STRIP := $(NDK_BIN)/llvm-strip
 SRC := native/device_probe/device_probe.c
 OUT := build/native
 
-CFLAGS_COMMON := -O2 -Wall -Wextra -Werror -std=c11
+CFLAGS_COMMON := -O2 -Wall -Wextra -Werror -std=c11 $(CFLAGS)
 # ELF 目标加隐藏可见性；PE/COFF 无此概念，靠 strip 达成同等效果
 ELF_CFLAGS := $(CFLAGS_COMMON) -fvisibility=hidden
 
@@ -21,7 +26,7 @@ all: linux android windows
 
 linux:
 	mkdir -p $(OUT)/linux-amd64
-	gcc $(ELF_CFLAGS) -c $(SRC) -o $(OUT)/linux-amd64/device_probe.o
+	$(CC) $(ELF_CFLAGS) -c $(SRC) -o $(OUT)/linux-amd64/device_probe.o
 	ar rcs $(OUT)/linux-amd64/libdevice_probe.a $(OUT)/linux-amd64/device_probe.o
 	strip --strip-unneeded $(OUT)/linux-amd64/libdevice_probe.a
 
@@ -50,11 +55,11 @@ symbols:
 # ---- T-M3-01 vector: int8 量化向量检索（三目标静态库 + 桌面单测/基准） ----
 VSRC := native/vector/vector.c
 VOUT := build/native
-VFLAGS := -O2 -Wall -Wextra -Werror -std=c11
+VFLAGS := -O2 -Wall -Wextra -Werror -std=c11 $(CFLAGS)
 
 vector-linux:
 	mkdir -p $(VOUT)/linux-amd64
-	gcc $(VFLAGS) -fvisibility=hidden -c $(VSRC) -o $(VOUT)/linux-amd64/vector.o
+	$(CC) $(VFLAGS) -fvisibility=hidden -c $(VSRC) -o $(VOUT)/linux-amd64/vector.o
 	ar rcs $(VOUT)/linux-amd64/libvector.a $(VOUT)/linux-amd64/vector.o
 	strip --strip-unneeded $(VOUT)/linux-amd64/libvector.a
 
@@ -74,10 +79,27 @@ vector: vector-linux vector-android vector-windows
 
 vector-test:
 	mkdir -p build
-	gcc $(VFLAGS) $(VSRC) native/vector/test/test_vector.c -o build/vector-test -lm
+	$(CC) $(VFLAGS) $(VSRC) native/vector/test/test_vector.c -o build/vector-test $(LDFLAGS) -lm
 
 bench-vector:
 	mkdir -p build
-	gcc $(VFLAGS) $(VSRC) native/vector/test/bench_vector.c -o build/bench-vector -lm
+	$(CC) $(VFLAGS) $(VSRC) native/vector/test/bench_vector.c -o build/bench-vector $(LDFLAGS) -lm
 
 .PHONY: vector vector-linux vector-android vector-windows vector-test bench-vector
+
+# ---- install / uninstall (Go commands) — DESTDIR/PREFIX 约定 ----
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+GO ?= go
+CMDS := srchat stresssim livecheck
+
+install:
+	install -d $(DESTDIR)$(BINDIR)
+	for c in $(CMDS); do \
+		$(GO) build -trimpath -ldflags "-s -w" -o $(DESTDIR)$(BINDIR)/$$c ./cmd/$$c || exit 1 ; \
+	done
+
+uninstall:
+	for c in $(CMDS); do rm -f $(DESTDIR)$(BINDIR)/$$c ; done
+
+.PHONY: install uninstall

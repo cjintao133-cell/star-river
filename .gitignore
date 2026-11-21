@@ -11,3 +11,5 @@ local.properties
 # 调试二进制 / 分发产物（勿入库）
 stresssim
 dist/
+# 本地覆盖率产物（CI 生成，不入库）
+coverage.out

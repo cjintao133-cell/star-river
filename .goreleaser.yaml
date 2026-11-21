@@ -12,6 +12,11 @@ builds:
     binary: srchat
     env:
       - CGO_ENABLED=1
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -buildid=
+    mod_timestamp: "{{ .CommitTimestamp }}"
     goos:
       - linux
     goarch:

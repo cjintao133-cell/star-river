@@ -4,7 +4,8 @@
 # Valgrind 不跑 wrap 版：注入态干扰其 syscall 包装层，正常版覆盖内存安全即可。
 set -uo pipefail
 cd "$(dirname "$0")/.."
-export TMPDIR=/root/build-tmp
+export TMPDIR="${TMPDIR:-$PWD/build/tmp}"
+mkdir -p "$TMPDIR"
 SRC="native/device_probe/device_probe.c native/device_probe/test/test_device_probe.c"
 OUT=build/native/test
 mkdir -p "$OUT"
