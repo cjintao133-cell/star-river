@@ -34,6 +34,8 @@ emo := endocrine.New(nil, nil)                  // pluggable 5-D emotion
 mem.Encode("m1", "user prefers Go", 0.9, 0.7)  // remember (text, importance, emotion)
 ```
 
+Just need memory alone? Import `kernel/hippocampus` by itself — see its runnable [Example](https://pkg.go.dev/github.com/cjintao133-cell/star-river/kernel/hippocampus#example-package) (forgetting + reinforcement).
+
 > **It does not run model weights — it owns the layer *around* the model, *inside* your app.**
 > Memory / emotion / proactivity are pluggable capabilities, not its definition.
 

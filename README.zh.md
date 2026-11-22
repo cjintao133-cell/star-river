@@ -77,6 +77,8 @@ sh scripts/check-open-split.sh
 go run ./cmd/srchat -base https://host/v1 -model <model> -keyfile /path/to/key
 ```
 
+只想要记忆？单独 import `kernel/hippocampus` 即可——包内 `Example` 可直接运行（遗忘 + 复习强化，pkg.go.dev 可见）。
+
 构建产物：Android `gomobile bind` → AAR；Windows/桌面 `-buildmode=c-shared` → DLL + JNI 桥。
 
 ## 角色卡格式
