@@ -106,9 +106,6 @@ func persistMoodLocked() {
 	}
 }
 
-// persistMemLocked 已废弃：记忆以 memories 表为真源，逐条落库（见 addMemoryLocked）。
-func persistMemLocked() {}
-
 // addMemoryLocked 追加一条记忆（调用方持 asmMu，且已 ensureAssembly）。
 // kind ∈ semantic|episodic|procedural|summary；返回记忆 id（空文本返回 ""）。
 func addMemoryLocked(text, kind string, imp, emo float64) string {

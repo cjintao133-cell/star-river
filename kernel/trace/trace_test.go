@@ -25,7 +25,8 @@ func TestNewIDHex(t *testing.T) {
 	if _, err := hex.DecodeString(id); err != nil {
 		t.Fatalf("非合法 hex: %v", err)
 	}
-	if NewID() == NewID() {
+	a, b := NewID(), NewID()
+	if a == b {
 		t.Fatal("ID 应不重复")
 	}
 }

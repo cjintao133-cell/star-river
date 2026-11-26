@@ -23,16 +23,6 @@ func memDBInsert(r memRecord) {
 	_, _ = st.Exec(context.Background(), `INSERT INTO memories_fts(mem_id,text) VALUES(?,?)`, r.ID, r.Text)
 }
 
-// memDBDelete 删除一条记忆（含 FTS）。
-func memDBDelete(id string) {
-	st := storeRef()
-	if st == nil {
-		return
-	}
-	_, _ = st.Exec(context.Background(), `DELETE FROM memories WHERE id=?`, id)
-	_, _ = st.Exec(context.Background(), `DELETE FROM memories_fts WHERE mem_id=?`, id)
-}
-
 // memDBCount 记忆总数。
 func memDBCount() int {
 	st := storeRef()
