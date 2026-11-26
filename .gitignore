@@ -13,3 +13,14 @@ stresssim
 dist/
 # 本地覆盖率产物（CI 生成，不入库）
 coverage.out
+
+# --- 本地私货 / 临时脚本（勿入库，防泄露）---
+/*.py
+_build/
+.freelance/
+resume*.pdf
+resume*.png
+test_resume.png
+README-AI.md
+_probe.txt
+_race.log
