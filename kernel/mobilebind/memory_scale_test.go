@@ -52,4 +52,3 @@ func TestKbIngestAndSearch(t *testing.T) {
 		t.Fatalf("docs 统计不对: %v", st)
 	}
 }
-

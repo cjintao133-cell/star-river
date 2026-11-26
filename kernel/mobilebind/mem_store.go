@@ -177,7 +177,12 @@ func kbIngest(docID, title, source, text string) int {
 	// 清旧分块
 	var old []string
 	if rows, err := st.Query(context.Background(), `SELECT chunk_id FROM kb_chunks WHERE doc_id=?`, docID); err == nil {
-		for rows.Next() { var c string; if rows.Scan(&c) == nil { old = append(old, c) } }
+		for rows.Next() {
+			var c string
+			if rows.Scan(&c) == nil {
+				old = append(old, c)
+			}
+		}
 		rows.Close()
 	}
 	for _, c := range old {
@@ -203,11 +208,15 @@ func kbSearch(q string, k int) []map[string]any {
 	if len([]rune(q)) < 3 {
 		return nil
 	}
-	if k <= 0 { k = 6 }
+	if k <= 0 {
+		k = 6
+	}
 	safe := "\"" + strings.ReplaceAll(q, "\"", " ") + "\""
 	rows, err := st.Query(context.Background(),
 		`SELECT chunk_id,doc_id,text FROM kb_chunks_fts WHERE kb_chunks_fts MATCH ? ORDER BY bm25(kb_chunks_fts) LIMIT ?`, safe, k)
-	if err != nil { return nil }
+	if err != nil {
+		return nil
+	}
 	defer rows.Close()
 	var out []map[string]any
 	for rows.Next() {
@@ -222,7 +231,9 @@ func kbSearch(q string, k int) []map[string]any {
 // kbDocCount 知识库文档数。
 func kbDocCount() int {
 	st := storeRef()
-	if st == nil { return 0 }
+	if st == nil {
+		return 0
+	}
 	var n int
 	_ = st.DB().QueryRow(`SELECT COUNT(*) FROM kb_docs`).Scan(&n)
 	return n
