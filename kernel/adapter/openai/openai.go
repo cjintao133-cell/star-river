@@ -23,6 +23,7 @@ type Usage struct {
 	PromptTokens     int64 `json:"prompt_tokens"`
 	CompletionTokens int64 `json:"completion_tokens"`
 	TotalTokens      int64 `json:"total_tokens"`
+	CachedTokens     int64 `json:"cached_tokens"`
 }
 
 // ChatRequest v1 最小请求。P1：stream/model/max_tokens 一律显式，不吃端点默认值。
@@ -33,6 +34,11 @@ type ChatRequest struct {
 	MaxTokens    int
 	NativeSearch bool      // 启用模型原生网页搜索（OpenAI: web_search_options + search-preview 模型）
 	Tools        []ToolDef // 工具定义（function calling）；空则不传 tools 参数
+	// 采样参数（nil=不传，用端点默认；0 是合法值）
+	Temperature      *float64
+	TopP             *float64
+	FrequencyPenalty *float64
+	PresencePenalty  *float64
 }
 
 // ToolDef 一个可调用工具的定义（供 function calling）。Parameters 为 JSON Schema。
@@ -275,7 +281,20 @@ func buildBody(req ChatRequest, stream bool) ([]byte, error) {
 		Stream           bool             `json:"stream"`
 		WebSearchOptions *struct{}        `json:"web_search_options,omitempty"`
 		Tools            []wireToolIn     `json:"tools,omitempty"`
-	}{Model: req.Model, Messages: msgs, MaxTokens: req.MaxTokens, Stream: stream}
+		Temperature      *float64         `json:"temperature,omitempty"`
+		TopP             *float64         `json:"top_p,omitempty"`
+		FrequencyPenalty *float64         `json:"frequency_penalty,omitempty"`
+		PresencePenalty  *float64         `json:"presence_penalty,omitempty"`
+		StreamOptions    *struct {
+			IncludeUsage bool `json:"include_usage"`
+		} `json:"stream_options,omitempty"`
+	}{Model: req.Model, Messages: msgs, MaxTokens: req.MaxTokens, Stream: stream,
+		Temperature: req.Temperature, TopP: req.TopP, FrequencyPenalty: req.FrequencyPenalty, PresencePenalty: req.PresencePenalty}
+	if stream {
+		body.StreamOptions = &struct {
+			IncludeUsage bool `json:"include_usage"`
+		}{IncludeUsage: true}
+	}
 	if req.NativeSearch {
 		body.WebSearchOptions = &struct{}{}
 	}
@@ -425,7 +444,14 @@ func (c *Client) emitError(emit func(types.StreamEvent), err error) {
 }
 
 func usageFrom(w *wireUsage) Usage {
-	return Usage{PromptTokens: w.PromptTokens, CompletionTokens: w.CompletionTokens, TotalTokens: w.TotalTokens}
+	var cached int64
+	if w.PromptTokensDetails != nil {
+		cached = w.PromptTokensDetails.CachedTokens
+	}
+	if w.PromptCacheHitTokens > cached {
+		cached = w.PromptCacheHitTokens
+	}
+	return Usage{PromptTokens: w.PromptTokens, CompletionTokens: w.CompletionTokens, TotalTokens: w.TotalTokens, CachedTokens: cached}
 }
 
 // 流式总量硬上限（防超长流/事件洪泛/工具参数膨胀刷爆内存；单行另由 scanSSE 限 1MiB）。

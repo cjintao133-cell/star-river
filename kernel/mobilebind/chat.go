@@ -6,6 +6,7 @@ package mobilebind
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
@@ -119,4 +120,67 @@ func jsonEscape(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// UsageSink 可选的用量回调：模型返回后回调一条用量（含缓存命中）。
+type UsageSink interface {
+	OnUsage(promptTokens int64, cachedTokens int64, completionTokens int64)
+}
+
+// chatParams 采样参数（JSON 解析，缺省字段留 nil=不传）。
+type chatParams struct {
+	Temperature      *float64 `json:"temperature"`
+	TopP             *float64 `json:"top_p"`
+	MaxTokens        int      `json:"max_tokens"`
+	FrequencyPenalty *float64 `json:"frequency_penalty"`
+	PresencePenalty  *float64 `json:"presence_penalty"`
+}
+
+// ChatStreamEx 带采样参数与用量回调的流式对话（ChatStream 的超集）。
+// paramsJSON 如 {"temperature":0.7,"top_p":0.9,"max_tokens":4096}，可空。
+// usage 可空；非空时末尾回调 OnUsage（promptTokens/cachedTokens/completionTokens）。
+func ChatStreamEx(baseURL, apiKey, model, system, user, paramsJSON string, sink ChatSink, usage UsageSink) {
+	if sink == nil {
+		return
+	}
+	if strings.TrimSpace(baseURL) == "" || strings.TrimSpace(model) == "" {
+		sink.OnError("endpoint/model 未配置")
+		return
+	}
+	var pp chatParams
+	if strings.TrimSpace(paramsJSON) != "" {
+		_ = json.Unmarshal([]byte(paramsJSON), &pp)
+	}
+	maxTok := pp.MaxTokens
+	if maxTok <= 0 {
+		maxTok = 4096
+	}
+	c := openai.NewWithHeaders(baseURL, apiKey, currentHeaders())
+	req := openai.ChatRequest{
+		Model:            model,
+		MaxTokens:        maxTok,
+		Messages:         orchestrator.BuildMinimal(system, nil, userMessage(user), orchestrator.Limits{MaxMessages: 20, MaxChars: 8000, MaxPersonaChars: 12000, MaxUserChars: 8000}),
+		Temperature:      pp.Temperature,
+		TopP:             pp.TopP,
+		FrequencyPenalty: pp.FrequencyPenalty,
+		PresencePenalty:  pp.PresencePenalty,
+	}
+	res, err := c.Chat(context.Background(), req, func(e types.StreamEvent) {
+		switch e.Kind {
+		case types.StreamDelta:
+			if e.Text != "" {
+				sink.OnDelta(e.Text)
+			}
+		case types.StreamError:
+			// 统一经返回值 OnError
+		}
+	})
+	if err != nil {
+		sink.OnError(redactKey(err.Error(), apiKey))
+		return
+	}
+	if usage != nil {
+		usage.OnUsage(res.Usage.PromptTokens, res.Usage.CachedTokens, res.Usage.CompletionTokens)
+	}
+	sink.OnDone(res.Model)
 }

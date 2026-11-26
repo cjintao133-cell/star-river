@@ -37,6 +37,7 @@ type memRecord struct {
 	Text string  `json:"text"`
 	Imp  float64 `json:"imp"`
 	Emo  float64 `json:"emo"`
+	Kind string  `json:"kind,omitempty"`
 }
 
 func metaGet(st *store.Store, key string) string {
@@ -78,14 +79,20 @@ func ensureAssembly() {
 			asmMood.Restore(snap)
 		}
 	}
-	if v := metaGet(st, metaMemKey); v != "" {
-		var recs []memRecord
-		if json.Unmarshal([]byte(v), &recs) == nil {
-			asmRecs = recs
-			for _, r := range recs {
-				asmMem.Encode(r.ID, r.Text, r.Imp, r.Emo)
+	// 真表加载；若旧版曾把记忆塞在 app_meta blob 里，做一次性迁移。
+	if memDBCount() == 0 {
+		if v := metaGet(st, metaMemKey); v != "" {
+			var recs []memRecord
+			if json.Unmarshal([]byte(v), &recs) == nil {
+				for _, r := range recs {
+					memDBInsert(r)
+				}
 			}
 		}
+	}
+	asmRecs = memDBLoadAll(0)
+	for _, r := range asmRecs {
+		asmMem.Encode(r.ID, r.Text, r.Imp, r.Emo)
 	}
 }
 
@@ -99,14 +106,24 @@ func persistMoodLocked() {
 	}
 }
 
-func persistMemLocked() {
-	st := storeRef()
-	if st == nil {
-		return
+// persistMemLocked 已废弃：记忆以 memories 表为真源，逐条落库（见 addMemoryLocked）。
+func persistMemLocked() {}
+
+// addMemoryLocked 追加一条记忆（调用方持 asmMu，且已 ensureAssembly）。
+// kind ∈ semantic|episodic|procedural|summary；返回记忆 id（空文本返回 ""）。
+func addMemoryLocked(text, kind string, imp, emo float64) string {
+	if strings.TrimSpace(text) == "" {
+		return ""
 	}
-	if b, err := json.Marshal(asmRecs); err == nil {
-		metaSet(st, metaMemKey, string(b))
-	}
+	text = truncate(text, 2000)
+	id := fmt.Sprintf("mem-%d", time.Now().UnixNano())
+	rec := memRecord{ID: id, Text: text, Imp: imp, Emo: emo, Kind: kind}
+	_ = asmMem.Encode(id, text, imp, emo)
+	asmRecs = append(asmRecs, rec)
+	memDBInsert(rec) // 真表 + FTS，无 500 上限
+	embedMemoryLocked(id, text)
+	hooksReg.Fire("on_memory_write", map[string]any{"kind": kind, "id": id, "len": len(text)})
+	return id
 }
 
 // resetAssembly 供 InitKernel 重开库时清空单例。
@@ -183,11 +200,13 @@ func assembleSystem(base, userMsg string) string {
 }
 
 func recallLocked(userMsg string, limit int) []hippocampus.Scored {
-	// 优先向量语义相似度；无向量则回退关键词重叠。
-	sims := vectorSimLocked(userMsg, 30)
+	// 混合检索：向量(语义) + FTS5(BM25 关键词) → RRF 融合；都无则回退字符重叠。
+	vecSims := vectorSimLocked(userMsg, 30)
+	ftsIDs := memFTSQuery(userMsg, 30)
 	var simFn func(m hippocampus.Memory) float64
-	if len(sims) > 0 {
-		simFn = func(m hippocampus.Memory) float64 { return sims[m.ID] }
+	if len(vecSims) > 0 || len(ftsIDs) > 0 {
+		rrf := rrfSim(vecSortedBySim(vecSims), ftsIDs)
+		simFn = func(m hippocampus.Memory) float64 { return rrf[m.ID] }
 	} else {
 		terms := keywords(userMsg)
 		simFn = func(m hippocampus.Memory) float64 {
@@ -228,13 +247,7 @@ func observeTurn(userText, assistantText string) {
 			}
 		}
 		_ = low
-		id := fmt.Sprintf("mem-%d", time.Now().UnixNano())
-		_ = asmMem.Encode(id, truncate(u, 300), imp, emo)
-		asmRecs = append(asmRecs, memRecord{ID: id, Text: truncate(u, 300), Imp: imp, Emo: emo})
-		embedMemoryLocked(id, truncate(u, 300))
-		if len(asmRecs) > memCap {
-			asmRecs = asmRecs[len(asmRecs)-memCap:]
-		}
+		addMemoryLocked(u, "episodic", imp, emo)
 	}
 	// 情绪演化：有正常回复则亲密/好奇微增、疲劳微增；空回复视为不顺。
 	if strings.TrimSpace(assistantText) != "" {
@@ -247,7 +260,6 @@ func observeTurn(userText, assistantText string) {
 	}
 	asmMood.Tick()
 	persistMoodLocked()
-	persistMemLocked()
 	// 事件背板：本轮记忆/情绪变化发门铃（供 UI 事件流/审计）。
 	_ = BusPublish("memory.turn", "assembly")
 	if strings.TrimSpace(assistantText) != "" {

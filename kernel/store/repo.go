@@ -251,6 +251,45 @@ func (r *Repo) ListMessages(ctx context.Context, sessionID string, limit int, be
 	return page, nil
 }
 
+// UpdateMessage 原地改写某条消息的 blocks（加密落库）。仅当 id+session_id 同时匹配才更新。
+func (r *Repo) UpdateMessage(ctx context.Context, id, sessionID string, blocks []types.ContentBlock) error {
+	if id == "" || sessionID == "" {
+		return fmt.Errorf("%w: id/session_id empty", ErrInvalidMessage)
+	}
+	blocksJSON, err := json.Marshal(blocks)
+	if err != nil {
+		return err
+	}
+	ct, err := r.cipher.SealField(blocksJSON, id, "blocks")
+	if err != nil {
+		return err
+	}
+	res, err := r.st.Exec(ctx, `UPDATE messages SET content_cipher=? WHERE id=? AND session_id=?`, ct, id, sessionID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrMessageNotFound
+	}
+	return nil
+}
+
+// DeleteMessage 删除某条消息（id+session_id 匹配）。刷新会话 updated_at。
+func (r *Repo) DeleteMessage(ctx context.Context, id, sessionID string) error {
+	if id == "" || sessionID == "" {
+		return fmt.Errorf("%w: id/session_id empty", ErrInvalidMessage)
+	}
+	res, err := r.st.Exec(ctx, `DELETE FROM messages WHERE id=? AND session_id=?`, id, sessionID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrMessageNotFound
+	}
+	_, _ = r.st.Exec(ctx, `UPDATE sessions SET updated_at=MAX(updated_at,?) WHERE id=?`, nowMilli(), sessionID)
+	return nil
+}
+
 // CountMessages 会话消息数（测试/UI 用）。
 func (r *Repo) CountMessages(ctx context.Context, sessionID string) (int, error) {
 	var n int

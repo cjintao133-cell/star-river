@@ -21,6 +21,7 @@ import (
 	"github.com/cjintao133-cell/star-river/kernel/adapter/openai"
 	"github.com/cjintao133-cell/star-river/kernel/core/types"
 	"github.com/cjintao133-cell/star-river/kernel/orchestrator"
+	"github.com/cjintao133-cell/star-river/kernel/policy"
 	"github.com/cjintao133-cell/star-river/kernel/tool"
 	"github.com/cjintao133-cell/star-river/kernel/tooldisc"
 )
@@ -243,6 +244,8 @@ func decodeImage(b64 string) ([]byte, bool) {
 
 // runChatLoop 执行工具调用循环。sink 收全部正文增量。
 func runChatLoop(send chatSend, apiKey, model string, msgs []types.Message, userMsg string, sink ChatSink) {
+	sp, _ := traceTracer().Begin("", "", "llm", "chat_loop", "")
+	defer func() { _ = traceTracer().End(sp, "ok", map[string]any{"model": model}) }()
 	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancel()
 
@@ -348,7 +351,15 @@ func lazyAddDiscovered(ctx context.Context, ix *tooldisc.Index, argsJSON string,
 }
 
 // runToolCall 执行一次 MCP 工具调用，返回文本与是否错误。
-func runToolCall(ctx context.Context, mgr *tool.Manager, owner map[string]string, call types.ToolCall) (string, bool) {
+func runToolCall(ctx context.Context, mgr *tool.Manager, owner map[string]string, call types.ToolCall) (out string, isErr bool) {
+	sp, _ := traceTracer().Begin("", "", "tool", call.Name, "")
+	defer func() {
+		st := "ok"
+		if isErr {
+			st = "error"
+		}
+		_ = traceTracer().End(sp, st, map[string]any{"tool": call.Name, "out_chars": len(out)})
+	}()
 	server, ok := owner[call.Name]
 	if !ok {
 		return "unknown tool: " + call.Name, true
@@ -359,11 +370,38 @@ func runToolCall(ctx context.Context, mgr *tool.Manager, owner map[string]string
 			return "bad tool arguments: " + err.Error(), true
 		}
 	}
+	// 策略闸：花钱/对外/危险工具需确认，超预算/黑名单直接拒绝。
+	action := classifyTool(call.Name, call.Arguments)
+	eng := policyEngineRef()
+	d, reason, pid := eng.Check(action)
+	switch d {
+	case policy.Deny:
+		return "[策略拒绝] " + reason, true
+	case policy.OverBudget:
+		return "[超预算拦截] " + reason, true
+	case policy.RequireConfirm:
+		return "[需人工确认] " + reason + " (确认ID=" + pid + ")，本次未执行", true
+	}
+	// 生命周期钩子：before_tool（可拦截）。
+	if _, abort := hooksReg.Fire("before_tool", map[string]any{"tool": call.Name, "server": server}); abort {
+		return "[钩子拦截] before_tool 阻止了工具执行: " + call.Name, true
+	}
 	cr, err := mgr.CallTool(ctx, server, call.Name, args)
 	if err != nil {
+		hooksReg.Fire("on_error", map[string]any{"tool": call.Name, "error": err.Error()})
 		return "tool error: " + err.Error(), true
 	}
-	return flattenResult(cr), cr.IsError
+	hooksReg.Fire("after_tool", map[string]any{"tool": call.Name, "is_error": cr.IsError})
+	if d == policy.Allow && action.Kind == policy.KindSpend {
+		eng.Commit(action)
+		polMu.Lock()
+		persistPolicySpentLocked()
+		polMu.Unlock()
+	}
+	// 注入防护：工具输出若含可疑指令，加围栏后回给模型。
+	res := flattenResult(cr)
+	res = FenceToolOutput("tool:"+call.Name, res)
+	return res, cr.IsError
 }
 
 // capSink 包裹真实 sink：累积正文，结束时记录一轮（记忆编码 + 情绪演化）。

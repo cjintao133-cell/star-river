@@ -94,6 +94,87 @@ var migrations = []migration{
 			`CREATE INDEX idx_characters_updated ON characters(updated_at)`,
 		},
 	},
+	{
+		version: 5,
+		name:    "traces",
+		stmts: []string{
+			`CREATE TABLE traces (
+                trace_id   TEXT NOT NULL,
+                span_id    TEXT NOT NULL,
+                parent_id  TEXT NOT NULL DEFAULT '',
+                kind       TEXT NOT NULL DEFAULT '',
+                name       TEXT NOT NULL DEFAULT '',
+                session_id TEXT NOT NULL DEFAULT '',
+                start_ms   INTEGER NOT NULL DEFAULT 0,
+                end_ms     INTEGER NOT NULL DEFAULT 0,
+                status     TEXT NOT NULL DEFAULT '',
+                attrs_json TEXT NOT NULL DEFAULT '{}',
+                PRIMARY KEY (trace_id, span_id)
+            )`,
+			`CREATE INDEX idx_traces_trace ON traces(trace_id)`,
+			`CREATE INDEX idx_traces_start ON traces(start_ms)`,
+		},
+	},
+	{
+		version: 6,
+		name:    "tasks",
+		stmts: []string{
+			`CREATE TABLE tasks (
+                id           TEXT PRIMARY KEY,
+                session_id   TEXT NOT NULL DEFAULT '',
+                character_id TEXT NOT NULL DEFAULT '',
+                title        TEXT NOT NULL DEFAULT '',
+                goal         TEXT NOT NULL DEFAULT '',
+                status       TEXT NOT NULL DEFAULT 'pending',
+                plan_json    TEXT NOT NULL DEFAULT '[]',
+                cursor       INTEGER NOT NULL DEFAULT 0,
+                results_json TEXT NOT NULL DEFAULT '[]',
+                error        TEXT NOT NULL DEFAULT '',
+                created_at   INTEGER NOT NULL DEFAULT 0,
+                updated_at   INTEGER NOT NULL DEFAULT 0
+            )`,
+			`CREATE INDEX idx_tasks_session ON tasks(session_id)`,
+			`CREATE INDEX idx_tasks_updated ON tasks(updated_at)`,
+		},
+	},
+	{
+		version: 7,
+		name:    "memory_kb",
+		stmts: []string{
+			// 长期记忆（真正的关系表，取代 app_meta 里的 JSON blob 与 500 硬上限）
+			`CREATE TABLE memories (
+                id             TEXT PRIMARY KEY,
+                kind           TEXT NOT NULL DEFAULT '',
+                text           TEXT NOT NULL,
+                importance     REAL NOT NULL DEFAULT 0.5,
+                emotion        REAL NOT NULL DEFAULT 0.0,
+                stability      REAL NOT NULL DEFAULT 0.0,
+                strength       REAL NOT NULL DEFAULT 0.0,
+                review_count   INTEGER NOT NULL DEFAULT 0,
+                created_at     INTEGER NOT NULL DEFAULT 0,
+                last_review_at INTEGER NOT NULL DEFAULT 0,
+                next_review_at INTEGER NOT NULL DEFAULT 0
+            )`,
+			`CREATE INDEX idx_memories_kind ON memories(kind)`,
+			// FTS5 关键词索引（trigram 切分：兼容中文任意长度子串 + 英文）
+			`CREATE VIRTUAL TABLE memories_fts USING fts5(mem_id UNINDEXED, text, tokenize='trigram')`,
+			// 本地 RAG 知识库：文档 + 分块 + 分块全文索引
+			`CREATE TABLE kb_docs (
+                id         TEXT PRIMARY KEY,
+                title      TEXT NOT NULL DEFAULT '',
+                source     TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL DEFAULT 0
+            )`,
+			`CREATE TABLE kb_chunks (
+                chunk_id TEXT PRIMARY KEY,
+                doc_id   TEXT NOT NULL,
+                ord      INTEGER NOT NULL DEFAULT 0,
+                text     TEXT NOT NULL
+            )`,
+			`CREATE INDEX idx_kb_chunks_doc ON kb_chunks(doc_id)`,
+			`CREATE VIRTUAL TABLE kb_chunks_fts USING fts5(chunk_id UNINDEXED, doc_id UNINDEXED, text, tokenize='trigram')`,
+		},
+	},
 }
 
 // migrate 执行迁移框架：bootstrap 版本表 → 读已应用集合 → 按序在事务内应用未应用者。

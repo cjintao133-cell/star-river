@@ -68,6 +68,8 @@ func InitKernel(dbPath, cipherKeyBase64 string) string {
 	mcpMu.Unlock()
 	resetAssembly()
 	resetProactive()
+	resetPolicy()
+	resetSkills()
 	return "OK"
 }
 
@@ -288,11 +290,21 @@ func AppendMessage(sessionID, role, text string) string {
 	return "OK"
 }
 
+type blockMeta struct {
+	Index    int    `json:"index"`
+	Type     string `json:"type"`
+	MIMEType string `json:"mime_type,omitempty"`
+	Text     string `json:"text,omitempty"`
+	Size     int    `json:"size,omitempty"`
+	HasData  bool   `json:"has_data,omitempty"`
+}
+
 type messageDTO struct {
-	ID        string `json:"id"`
-	Role      string `json:"role"`
-	Text      string `json:"text"`
-	CreatedAt int64  `json:"created_at"`
+	ID        string      `json:"id"`
+	Role      string      `json:"role"`
+	Text      string      `json:"text"`
+	Blocks    []blockMeta `json:"blocks,omitempty"`
+	CreatedAt int64       `json:"created_at"`
 }
 
 // ListMessages 列出会话消息（解密后，时间正序）。返回 JSON 数组 / "ERR:..."。
@@ -310,12 +322,21 @@ func ListMessages(sessionID string, limit int) string {
 	out := make([]messageDTO, 0, len(page.Records))
 	for _, rec := range page.Records {
 		var b string
-		for _, blk := range rec.Message.Blocks {
+		var metas []blockMeta
+		for i, blk := range rec.Message.Blocks {
 			if blk.Type == types.BlockText {
 				b += blk.Text
 			}
+			metas = append(metas, blockMeta{
+				Index:    i,
+				Type:     string(blk.Type),
+				MIMEType: blk.MIMEType,
+				Text:     blk.Text,
+				Size:     len(blk.Data),
+				HasData:  len(blk.Data) > 0,
+			})
 		}
-		out = append(out, messageDTO{ID: rec.Message.ID, Role: string(rec.Message.Role), Text: b, CreatedAt: rec.Message.CreatedAt})
+		out = append(out, messageDTO{ID: rec.Message.ID, Role: string(rec.Message.Role), Text: b, Blocks: metas, CreatedAt: rec.Message.CreatedAt})
 	}
 	// ListMessages 返回降序（repo 按 seq desc），翻成时间正序更友好。
 	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
@@ -323,6 +344,106 @@ func ListMessages(sessionID string, limit int) string {
 	}
 	b, _ := json.Marshal(out)
 	return string(b)
+}
+
+// ---- P0-4: 多模态消息（图片/语音/任意块）落库 ----
+
+const (
+	maxBlocksPerMessage = 32
+	maxBlockBytes       = 16 << 20 // 单块解码后上限 16MB
+	maxTotalBytes       = 48 << 20 // 单条消息所有块合计 48MB
+	maxTextRunes        = 200000   // 单文本块字符上限
+)
+
+// blockIn 是 AppendMessageBlocks 的入参块（data_b64 为可选二进制）。
+type blockIn struct {
+	Type     string `json:"type"`
+	Text     string `json:"text,omitempty"`
+	MIMEType string `json:"mime_type,omitempty"`
+	DataB64  string `json:"data_b64,omitempty"`
+}
+
+// AppendMessageBlocks 追加一条可含多模态块的消息（图/音/文本/工具块）。
+// blocksJSON 为 []blockIn 的 JSON；二进制以 data_b64 传。返回 "OK"/"ERR:..."。
+func AppendMessageBlocks(sessionID, role, blocksJSON string) string {
+	if !kernelReady() {
+		return "ERR:kernel not initialized"
+	}
+	if !types.Role(role).Valid() {
+		return "ERR:invalid role"
+	}
+	if blocksJSON == "" {
+		return "ERR:empty blocks"
+	}
+	var ins []blockIn
+	if err := json.Unmarshal([]byte(blocksJSON), &ins); err != nil {
+		return "ERR:bad json: " + err.Error()
+	}
+	if len(ins) == 0 {
+		return "ERR:no blocks"
+	}
+	if len(ins) > maxBlocksPerMessage {
+		return fmt.Sprintf("ERR:too many blocks (max %d)", maxBlocksPerMessage)
+	}
+	blocks := make([]types.ContentBlock, 0, len(ins))
+	total := 0
+	for i, in := range ins {
+		bt := types.BlockType(in.Type)
+		if !bt.Valid() {
+			return fmt.Sprintf("ERR:block %d invalid type %q", i, in.Type)
+		}
+		cb := types.ContentBlock{Type: bt, Text: in.Text, MIMEType: in.MIMEType}
+		if len([]rune(in.Text)) > maxTextRunes {
+			return fmt.Sprintf("ERR:block %d text too long", i)
+		}
+		if in.DataB64 != "" {
+			data, err := base64.StdEncoding.DecodeString(in.DataB64)
+			if err != nil {
+				return fmt.Sprintf("ERR:block %d bad base64", i)
+			}
+			if len(data) > maxBlockBytes {
+				return fmt.Sprintf("ERR:block %d too large (max %d bytes)", i, maxBlockBytes)
+			}
+			total += len(data)
+			if total > maxTotalBytes {
+				return fmt.Sprintf("ERR:message too large (max %d bytes total)", maxTotalBytes)
+			}
+			cb.Data = data
+		}
+		blocks = append(blocks, cb)
+	}
+	mid := genMessageID()
+	msg := types.Message{
+		ID: mid, SessionID: sessionID, Role: types.Role(role),
+		Blocks:    blocks,
+		CreatedAt: time.Now().UnixMilli(),
+	}
+	if _, err := kbRepo.AppendMessage(context.Background(), msg); err != nil {
+		return "ERR:" + err.Error()
+	}
+	return "OK"
+}
+
+// GetMessageMedia 取某条消息第 index 个块的二进制内容（base64 返回）。无二进制返回 "ERR:..."。
+func GetMessageMedia(sessionID, messageID string, index int) string {
+	if !kernelReady() {
+		return "ERR:kernel not initialized"
+	}
+	rec, err := kbRepo.GetMessage(context.Background(), messageID)
+	if err != nil {
+		return "ERR:" + err.Error()
+	}
+	if rec.Message.SessionID != sessionID {
+		return "ERR:session mismatch"
+	}
+	if index < 0 || index >= len(rec.Message.Blocks) {
+		return "ERR:index out of range"
+	}
+	blk := rec.Message.Blocks[index]
+	if len(blk.Data) == 0 {
+		return "ERR:no binary data"
+	}
+	return base64.StdEncoding.EncodeToString(blk.Data)
 }
 
 // DeleteSession 删除会话（级联删除其消息）。返回 "OK"/"ERR:..."。

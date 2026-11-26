@@ -10,9 +10,13 @@ import (
 
 // wireUsage token 用量（T-M3-07 统计数据源）。
 type wireUsage struct {
-	PromptTokens     int64 `json:"prompt_tokens"`
-	CompletionTokens int64 `json:"completion_tokens"`
-	TotalTokens      int64 `json:"total_tokens"`
+	PromptTokens        int64 `json:"prompt_tokens"`
+	CompletionTokens    int64 `json:"completion_tokens"`
+	TotalTokens         int64 `json:"total_tokens"`
+	PromptCacheHitTokens int64 `json:"prompt_cache_hit_tokens"` // DeepSeek 风格
+	PromptTokensDetails *struct {
+		CachedTokens int64 `json:"cached_tokens"` // OpenAI 风格
+	} `json:"prompt_tokens_details"`
 }
 
 // wireToolCall 流式 tool_calls 增量片段：首片带 id/name，后续片只带 arguments 续段。
